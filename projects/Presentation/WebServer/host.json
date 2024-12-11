@@ -1,0 +1,26 @@
+{
+  "version": "2.0",
+  "extensions": {
+    "http": {
+      "routePrefix": "api",
+      "maxOutstandingRequests": 100,
+      "maxConcurrentRequests": 10,
+      "cors": {
+        "allowedOrigins": [
+          //"chrome-extension://<YOUR_EXTENSION_ID>",
+          "chrome-extension://kgldhlnnafgejkgnokojmjbnbddfjjmd",
+          "http://localhost"
+        ],
+        "allowCredentials": true
+      }
+    }
+  },
+  "logging": {
+    "logLevel": {
+      "Function": "Information",
+      "Host.Results": "Information",
+      "Host.Triggers": "Information"
+    }
+  },
+  "functionTimeout": "00:10:00"
+}
