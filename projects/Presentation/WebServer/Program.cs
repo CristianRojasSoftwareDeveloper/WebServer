@@ -1,6 +1,6 @@
-using WebServer; // Azure Function que proporciona la integración con Azure SignalR para un entorno serverless.
 using Microsoft.Extensions.DependencyInjection; // Necesario para inyectar servicios en la aplicación.
 using Microsoft.Extensions.Hosting; // Proporciona las clases base para configurar y ejecutar la aplicación.
+using WebServer; // Azure Function que proporciona la integración con Azure SignalR para un entorno serverless.
 
 // Configuración principal del host para la Azure Function
 var host = new HostBuilder()

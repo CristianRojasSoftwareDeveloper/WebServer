@@ -3,7 +3,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker.SignalRService;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using WebServer.Domain.Abstractions.Interfaces;
+using WebServer.Abstractions.Interfaces;
 
 namespace WebServer {
 

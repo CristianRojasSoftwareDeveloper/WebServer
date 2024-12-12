@@ -1,4 +1,4 @@
-﻿namespace WebServer.Domain.Abstractions.Interfaces {
+﻿namespace WebServer.Abstractions.Interfaces {
 
     public interface IWebClient {
 
