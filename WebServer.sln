@@ -1,13 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebServer", "projects\Presentation\WebServer\WebServer.csproj", "{D2C7A7AA-9F28-4182-A768-AF0A434AFC17}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presentation", "Presentation", "{B10CAF27-79B5-4376-BF9A-A69623FDA334}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clean Architecture", "Clean Architecture", "{7E5C2C5A-81D8-4703-B380-A756D8F8F61F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Components", "Components", "{7E5C2C5A-81D8-4703-B380-A756D8F8F61F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared Kernel", "Shared Kernel", "{681711AD-1973-488F-A16C-EF355013F9D0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Application", "Application", "{3843FE86-9192-4631-9B33-E062AEAAE325}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domain", "Domain", "{C1619276-7CAF-4E3E-A457-C7A89E987188}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{C20BE598-C072-48AA-8ECC-FB0A83028B3D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,5 +33,9 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D2C7A7AA-9F28-4182-A768-AF0A434AFC17} = {B10CAF27-79B5-4376-BF9A-A69623FDA334}
+		{681711AD-1973-488F-A16C-EF355013F9D0} = {7E5C2C5A-81D8-4703-B380-A756D8F8F61F}
+		{3843FE86-9192-4631-9B33-E062AEAAE325} = {681711AD-1973-488F-A16C-EF355013F9D0}
+		{C1619276-7CAF-4E3E-A457-C7A89E987188} = {681711AD-1973-488F-A16C-EF355013F9D0}
+		{C20BE598-C072-48AA-8ECC-FB0A83028B3D} = {681711AD-1973-488F-A16C-EF355013F9D0}
 	EndGlobalSection
 EndGlobal
