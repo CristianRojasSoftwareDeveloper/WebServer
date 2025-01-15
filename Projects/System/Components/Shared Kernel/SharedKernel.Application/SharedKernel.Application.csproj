@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharedKernel.Domain\SharedKernel.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\Abstractions\Operations\Requests\Operators\Permissions\Use Cases\Commands\" />
+    <Folder Include="Models\Abstractions\Operations\Requests\Operators\System Logs\Use Cases\Commands\" />
+  </ItemGroup>
+
+</Project>
