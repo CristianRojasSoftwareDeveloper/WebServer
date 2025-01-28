@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\Shared Kernel\SharedKernel.Application\SharedKernel.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Operators\SystemLogs\Operations\Use Cases\Commands\" />
+  </ItemGroup>
+
 </Project>

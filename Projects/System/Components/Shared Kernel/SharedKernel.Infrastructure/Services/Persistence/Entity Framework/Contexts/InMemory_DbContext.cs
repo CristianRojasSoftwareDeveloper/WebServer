@@ -1,65 +1,40 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts {
 
     /// <summary>
-    /// DbContext para la base de datos en memoria.
-    /// Proporciona acceso a las entidades y configura las propiedades de las entidades.
+    /// Implementación específica del DbContext para pruebas en memoria.
+    /// Proporciona una base de datos en memoria para pruebas unitarias y desarrollo,
+    /// sin necesidad de una base de datos real.
     /// </summary>
+    /// <remarks>
+    /// Esta implementación es útil para pruebas unitarias y escenarios de desarrollo
+    /// donde no se requiere persistencia real de datos.
+    /// </remarks>
     public class InMemory_DbContext : ApplicationDbContext {
+        /// <summary>
+        /// Crea la configuración necesaria para la base de datos en memoria.
+        /// </summary>
+        /// <param name="databaseName">Nombre que identifica la instancia de la base de datos en memoria.</param>
+        /// <returns>Opciones de configuración del contexto específicas para la base de datos en memoria.</returns>
+        private static DbContextOptionsBuilder<InMemory_DbContext> CreateConfiguration (string databaseName) =>
+            new DbContextOptionsBuilder<InMemory_DbContext>().UseInMemoryDatabase(databaseName);
 
         /// <summary>
-        /// Nombre de la base de datos en memoria.
+        /// Inicializa una nueva instancia del contexto de base de datos en memoria.
         /// </summary>
-        private string _databaseName { get; }
-
-        /// <summary>
-        /// Instancia singleton del contexto de base de datos en memoria.
-        /// </summary>
-        private static InMemory_DbContext? _instance { get; set; }
-
-        /// <summary>
-        /// Objeto para bloqueo de hilo seguro.
-        /// </summary>
-        private static object _lock { get; } = new();
-
-        /// <summary>
-        /// Constructor privado para evitar instanciación directa.
-        /// </summary>
-        /// <param name="databaseName">Nombre de la base de datos en memoria.</param>
-        private InMemory_DbContext (string databaseName) =>
-            _databaseName = databaseName;
-
-        /// <summary>
-        /// Obtiene la instancia singleton de InMemory_DbContext.
-        /// </summary>
-        /// <param name="databaseName">Nombre de la base de datos en memoria. Por defecto "InMemoryDb".</param>
-        /// <returns>Instancia singleton de InMemory_DbContext.</returns>
-        public static InMemory_DbContext Instance (string databaseName = "InMemoryDb") {
-            // Comprueba si la instancia ya existe
-            if (_instance == null) {
-                // Bloqueo para evitar condiciones de carrera
-                lock (_lock) {
-                    // Inicializa la instancia si aún no existe
-                    _instance ??= new InMemory_DbContext(databaseName);
-                }
-            }
-            // Devuelve la instancia singleton
-            return _instance;
-        }
-
-        /// <summary>
-        /// Configura las opciones del contexto, como la base de datos en memoria.
-        /// </summary>
-        /// <param name="optionsBuilder">El generador de opciones de DbContext.</param>
-        protected override void OnConfiguring (DbContextOptionsBuilder optionsBuilder) {
-            // Comprueba si las opciones aún no están configuradas
-            if (!optionsBuilder.IsConfigured) {
-                // Llama a la configuración base
-                base.OnConfiguring(optionsBuilder);
-                // Configura la conexión a la base de datos en memoria
-                optionsBuilder.UseInMemoryDatabase(_databaseName);
-            }
+        /// <param name="databaseName">
+        /// Nombre que identifica la instancia de la base de datos en memoria.
+        /// Si no se especifica, se usa "InMemoryDb" por defecto.
+        /// </param>
+        /// <exception cref="ArgumentNullException">Se lanza cuando databaseName está vacío.</exception>
+        /// <remarks>
+        /// Cada nombre de base de datos crea una instancia separada en memoria.
+        /// Usar el mismo nombre en diferentes instancias permite compartir los datos entre ellas.
+        /// </remarks>
+        public InMemory_DbContext (string databaseName = "InMemoryDb") : base(CreateConfiguration(databaseName)) {
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentNullException(nameof(databaseName), "El nombre de la base de datos en memoria no puede estar vacío.");
         }
 
     }

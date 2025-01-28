@@ -18,14 +18,14 @@ namespace SharedKernel.Application.Models.Abstractions.Errors {
         /// </summary>
         /// <param name="errorCode">Código de error HTTP.</param>
         /// <param name="message">Mensaje descriptivo del error.</param>
-        /// <param name="innerException">Excepción interna opcional.</param>
+        /// <param name="innerException">Excepción interna [opcional].</param>
         protected ApplicationError (HttpStatusCode errorCode, string message, Exception? innerException = null) : base(message, innerException) =>
             ErrorCode = errorCode;
 
         /// <summary>
         /// Crea un ApplicationError genérico para errores internos del servidor.
         /// </summary>
-        /// <param name="innerException">Excepción interna opcional.</param>
+        /// <param name="innerException">Excepción interna [opcional].</param>
         /// <returns>Una nueva instancia de ApplicationError con un código de error 500.</returns>
         public static ApplicationError Create (Exception? innerException = null) => new(HttpStatusCode.InternalServerError, "Ha ocurrido un error interno en la aplicación", innerException);
 

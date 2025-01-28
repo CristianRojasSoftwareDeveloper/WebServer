@@ -1,68 +1,44 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SharedKernel.Application.Models.Abstractions.Enumerations;
+using Microsoft.EntityFrameworkCore;
+using SharedKernel.Domain.Models.Abstractions.Enumerations;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts {
 
     /// <summary>
-    /// DbContext para la base de datos PostgreSQL.
-    /// Proporciona acceso a las entidades y configura las propiedades de las entidades.
+    /// Implementación específica del DbContext para PostgreSQL.
+    /// Configura y gestiona la conexión con una base de datos PostgreSQL, incluyendo el mapeo de enumeraciones
+    /// y configuraciones específicas del proveedor.
     /// </summary>
     public class PostgreSQL_DbContext : ApplicationDbContext {
 
         /// <summary>
-        /// Cadena de conexión a la base de datos PostgreSQL.
+        /// Crea la configuración necesaria para la conexión a PostgreSQL.
         /// </summary>
-        private string _connectionString { get; }
+        /// <param name="connectionString">Cadena de conexión que especifica los parámetros de conexión a la base de datos PostgreSQL.</param>
+        /// <returns>Opciones de configuración del contexto específicas para PostgreSQL.</returns>
+        /// <remarks>
+        /// Configura el mapeo del enum LogLevel y otras opciones específicas de PostgreSQL.
+        /// </remarks>
+        private static DbContextOptionsBuilder<PostgreSQL_DbContext> CreateConfiguration (string connectionString) =>
+            new DbContextOptionsBuilder<PostgreSQL_DbContext>().UseNpgsql(connectionString, postgreSQL_dbContextOptionsBuilder =>
+                postgreSQL_dbContextOptionsBuilder.MapEnum<LogLevel>("log_level"));
 
         /// <summary>
-        /// Instancia singleton del contexto de base de datos PostgreSQL.
+        /// Constructor estático que configura comportamientos globales específicos de PostgreSQL.
         /// </summary>
-        private static PostgreSQL_DbContext? _instance { get; set; }
+        /// <remarks>
+        /// Habilita el comportamiento de marca de tiempo heredado para mantener la compatibilidad
+        /// con versiones anteriores de PostgreSQL en el manejo de timestamps.
+        /// </remarks>
+        static PostgreSQL_DbContext () => AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
         /// <summary>
-        /// Objeto para bloqueo de hilo seguro.
-        /// </summary>
-        private static object _lock { get; } = new();
-
-        /// <summary>
-        /// Constructor privado para evitar instanciación directa.
+        /// Inicializa una nueva instancia del contexto de base de datos PostgreSQL.
         /// </summary>
         /// <param name="connectionString">Cadena de conexión a la base de datos PostgreSQL.</param>
-        private PostgreSQL_DbContext (string connectionString) =>
-            _connectionString = connectionString;
-
-        /// <summary>
-        /// Obtiene la instancia singleton de PostgreSQL_DbContext.
-        /// </summary>
-        /// <param name="connectionString">Cadena de conexión a la base de datos PostgreSQL.</param>
-        /// <returns>Instancia singleton de PostgreSQL_DbContext.</returns>
-        public static PostgreSQL_DbContext Instance (string connectionString) {
-            // Comprueba si la instancia ya existe
-            if (_instance == null) {
-                // Bloqueo para evitar condiciones de carrera
-                lock (_lock) {
-                    // Inicializa la instancia si aún no existe
-                    _instance ??= new PostgreSQL_DbContext(connectionString);
-                }
-            }
-            // Devuelve la instancia singleton
-            return _instance;
-        }
-
-        /// <summary>
-        /// Configura las opciones del contexto, como la cadena de conexión a la base de datos.
-        /// </summary>
-        /// <param name="dbContextOptionsBuilder">El generador de opciones de DbContext.</param>
-        protected override void OnConfiguring (DbContextOptionsBuilder dbContextOptionsBuilder) {
-            // Comprueba si las opciones aún no están configuradas
-            if (!dbContextOptionsBuilder.IsConfigured) {
-                // Llama a la configuración base
-                base.OnConfiguring(dbContextOptionsBuilder);
-                // Configura la conexión a la base de datos PostgreSQL
-                dbContextOptionsBuilder.UseNpgsql(_connectionString, dbContextOptionsBuilder => dbContextOptionsBuilder.MapEnum<LogLevel>("log_level"));
-                // Habilita el comportamiento de marca de tiempo heredado para PostgreSQL
-                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-            }
+        /// <exception cref="ArgumentNullException">Se lanza cuando connectionString está vacía.</exception>
+        public PostgreSQL_DbContext (string connectionString) : base(CreateConfiguration(connectionString)) {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentNullException(nameof(connectionString), "La cadena de conexión no puede estar vacía.");
         }
 
     }

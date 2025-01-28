@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
+﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
+using SharedKernel.Domain.Models.Abstractions;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
-using SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Repositories;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
 
-namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories.Authorizations {
+namespace Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories.Authorizations {
 
     /// <summary>
     /// Implementación abstracta de un repositorio genérico utilizando Entity Framework.
@@ -15,53 +16,29 @@ namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories
         /// Inicializa una nueva instancia del repositorio genérico.
         /// </summary>
         /// <param name="dbContext">El contexto de base de datos de Entity Framework.</param>
-        public Role_EntityFrameworkRepository (DbContext dbContext) : base(dbContext) { }
-
-        #region Métodos síncronos
-
-        /// <inheritdoc />
-        public Role AddRole (Role newRole) =>
-            AddEntity(newRole, true, true);
-
-        /// <inheritdoc />
-        public List<Role> GetRoles () =>
-            GetEntities();
-
-        /// <inheritdoc />
-        public Role GetRoleByID (int roleID) =>
-            GetEntityByID(roleID);
-
-        /// <inheritdoc />
-        public Role UpdateRole (Role roleUpdate) =>
-            UpdateEntity(roleUpdate, trySetUpdateDatetime: true);
-
-        /// <inheritdoc />
-        public bool DeleteRoleByID (int roleID) =>
-            DeleteEntityByID(roleID);
-
-        #endregion
+        public Role_EntityFrameworkRepository (ApplicationDbContext dbContext) : base(dbContext) { }
 
         #region Métodos asíncronos
 
         /// <inheritdoc />
-        public Task<Role> AddRoleAsync (Role newRole) =>
-            AddEntityAsync(newRole, true, true);
+        public Task<Role> AddRole (Role newRole) =>
+            AddEntity(newRole);
 
         /// <inheritdoc />
-        public Task<List<Role>> GetRolesAsync () =>
-            GetEntitiesAsync();
+        public Task<List<Role>> GetRoles (bool enableTracking = false) =>
+            GetEntities(enableTracking);
 
         /// <inheritdoc />
-        public Task<Role> GetRoleByIDAsync (int roleID) =>
-            GetEntityByIDAsync(roleID);
+        public Task<Role?> GetRoleByID (int roleID, bool enableTracking = false) =>
+            GetEntityByID(roleID, enableTracking);
 
         /// <inheritdoc />
-        public Task<Role> UpdateRoleAsync (Role roleUpdate) =>
-            UpdateEntityAsync(roleUpdate, trySetUpdateDatetime: true);
+        public Task<Role> UpdateRole (Partial<Role> roleUpdate) =>
+            UpdateEntity(roleUpdate);
 
         /// <inheritdoc />
-        public Task<bool> DeleteRoleByIDAsync (int roleID) =>
-            DeleteEntityByIDAsync(roleID);
+        public Task<bool> DeleteRoleByID (int roleID) =>
+            DeleteEntityByID(roleID);
 
         #endregion
 

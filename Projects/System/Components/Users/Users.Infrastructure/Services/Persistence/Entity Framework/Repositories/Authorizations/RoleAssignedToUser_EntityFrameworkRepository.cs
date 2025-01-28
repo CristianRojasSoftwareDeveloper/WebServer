@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
+using SharedKernel.Domain.Models.Abstractions;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
-using SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Repositories;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
 
-namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories.Authorizations {
+namespace Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories.Authorizations {
 
     /// <summary>
     /// Implementación abstracta de un repositorio genérico utilizando Entity Framework.
@@ -15,77 +17,40 @@ namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories
         /// Inicializa una nueva instancia del repositorio genérico.
         /// </summary>
         /// <param name="dbContext">El contexto de base de datos de Entity Framework.</param>
-        public RoleAssignedToUser_EntityFrameworkRepository (DbContext dbContext) : base(dbContext) { }
-
-        #region Métodos síncronos
-
-        /// <inheritdoc />
-        public RoleAssignedToUser AddRoleAssignedToUser (RoleAssignedToUser newRoleAssignedToUser) =>
-            AddEntity(newRoleAssignedToUser, true, true);
-
-        /// <inheritdoc />
-        public RoleAssignedToUser GetRoleAssignedToUserByID (int roleAssignedToUserID) =>
-            GetEntityByID(roleAssignedToUserID);
-
-        public RoleAssignedToUser GetRoleAssignedToUserByForeignKeys (int userID, int roleID) =>
-            GetQueryable().
-            FirstOrDefault(roleAssignedToUser => roleAssignedToUser.UserID == userID && roleAssignedToUser.RoleID == roleID);
-
-        /// <inheritdoc />
-        public List<RoleAssignedToUser> GetRolesAssignedToUsers () =>
-            GetEntities();
-
-        public List<RoleAssignedToUser> GetRolesAssignedToUserByUserID (int userID) =>
-            GetQueryable().
-            Where(ur => ur.UserID == userID).
-            Include(ur => ur.Role).
-            ThenInclude(r => r.PermissionAssignedToRoles).
-            ThenInclude(rp => rp.Permission).
-            ToList();
-
-        /// <inheritdoc />
-        public RoleAssignedToUser UpdateRoleAssignedToUser (RoleAssignedToUser roleAssignedToUserUpdate) =>
-            UpdateEntity(roleAssignedToUserUpdate, trySetUpdateDatetime: true);
-
-        /// <inheritdoc />
-        public bool DeleteRoleAssignedToUserByID (int roleAssignedToUserID) =>
-            DeleteEntityByID(roleAssignedToUserID);
-
-        #endregion
+        public RoleAssignedToUser_EntityFrameworkRepository (ApplicationDbContext dbContext) : base(dbContext) { }
 
         #region Métodos asíncronos
 
         /// <inheritdoc />
-        public Task<RoleAssignedToUser> AddRoleAssignedToUserAsync (RoleAssignedToUser newRoleAssignedToUser) =>
-            AddEntityAsync(newRoleAssignedToUser, true, true);
+        public Task<RoleAssignedToUser> AddRoleAssignedToUser (RoleAssignedToUser newRoleAssignedToUser) =>
+            AddEntity(newRoleAssignedToUser);
 
         /// <inheritdoc />
-        public Task<RoleAssignedToUser> GetRoleAssignedToUserByIDAsync (int roleAssignedToUserID) =>
-            GetEntityByIDAsync(roleAssignedToUserID);
-
-        public Task<RoleAssignedToUser> GetRoleAssignedToUserByForeignKeysAsync (int userID, int roleID) =>
-            GetQueryable().
-            FirstOrDefaultAsync(roleAssignedToUser => roleAssignedToUser.UserID == userID && roleAssignedToUser.RoleID == roleID);
+        public Task<List<RoleAssignedToUser>> GetRolesAssignedToUsers (bool enableTracking = false) =>
+            GetEntities(enableTracking);
 
         /// <inheritdoc />
-        public Task<List<RoleAssignedToUser>> GetRolesAssignedToUsersAsync () =>
-            GetEntitiesAsync();
+        public Task<RoleAssignedToUser?> GetRoleAssignedToUserByID (int roleAssignedToUserID, bool enableTracking = false) =>
+            GetEntityByID(roleAssignedToUserID, enableTracking);
 
-        public Task<List<RoleAssignedToUser>> GetRolesAssignedToUserByUserIDAsync (int userID) =>
-            GetQueryable().
-            Where(ur => ur.UserID == userID).
-            Include(ur => ur.Role).
-            ThenInclude(r => r.PermissionAssignedToRoles).
-            ThenInclude(rp => rp.Permission).
+        public Task<List<RoleAssignedToUser>> GetRolesAssignedToUserByUserID (int userID, bool enableTracking = false) =>
+            GetQueryable(enableTracking).
+            Where(roleAssignedToUser => roleAssignedToUser.UserID == userID).
+            Include(roleAssignedToUser => roleAssignedToUser.Role).
+            ThenInclude(role => role.PermissionAssignedToRoles).
+            ThenInclude(permissionAssignedToRole => permissionAssignedToRole.Permission).
             ToListAsync();
 
-        /// <inheritdoc />
-        public Task<RoleAssignedToUser> UpdateRoleAssignedToUserAsync (RoleAssignedToUser roleAssignedToUserUpdate) =>
-            UpdateEntityAsync(roleAssignedToUserUpdate, trySetUpdateDatetime: true);
+        public Task<RoleAssignedToUser?> GetRoleAssignedToUserByForeignKeys (int userID, int roleID, bool enableTracking = false) =>
+            FirstOrDefault(roleAssignedToUser => roleAssignedToUser.UserID == userID && roleAssignedToUser.RoleID == roleID, enableTracking);
 
         /// <inheritdoc />
-        public Task<bool> DeleteRoleAssignedToUserByIDAsync (int roleAssignedToUserID) =>
-            DeleteEntityByIDAsync(roleAssignedToUserID);
+        public Task<RoleAssignedToUser> UpdateRoleAssignedToUser (Partial<RoleAssignedToUser> roleAssignedToUserUpdate) =>
+            UpdateEntity(roleAssignedToUserUpdate);
+
+        /// <inheritdoc />
+        public Task<bool> DeleteRoleAssignedToUserByID (int roleAssignedToUserID) =>
+            DeleteEntityByID(roleAssignedToUserID);
 
         #endregion
 

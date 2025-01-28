@@ -17,16 +17,17 @@ namespace ConsoleApplication.Layers {
         /// Punto de entrada principal de la aplicación de consola.
         /// </summary>
         /// <param name="args">Argumentos de la línea de comandos.</param>
-        internal static void ExecuteTestFlow (IAuthService authService, IPersistenceService persistenceService) {
+        internal static async Task ExecuteTestFlow (IAuthService authService, IPersistenceService persistenceService) {
 
             Printer.PrintLine($"\n{"Iniciando el flujo de operaciones de prueba de la capa de servicios del sistema (también llamada capa de infraestructura en Arquitectura Limpia)".Underline()}");
 
             #region Paso 1.1: Registrar un nuevo usuario
             Printer.PrintLine($"\n{"1.1. Registrando un nuevo usuario [persistenceService.UserRepository.AddUser(newUser)]".Underline()}");
 
+            const string decryptedPassword = "secret-key";
             var newUser = new User {
                 Username = "CristianDeveloper",
-                Password = "secret-key",
+                Password = decryptedPassword,
                 Name = "Cristian Rojas",
                 Email = "cristian.rojas.software.developer@gmail.com"
             };
@@ -53,16 +54,16 @@ namespace ConsoleApplication.Layers {
             // Verificar si la contraseña es nula o vacía
             if (string.IsNullOrWhiteSpace(newUser.Password))
                 validationErrors.Add(ValidationError.Create(nameof(newUser.Password), "La contraseña del usuario no puede ser nula o vacía"));
+            else
+                // Hashear la contraseña del usuario y asignarla al campo EncryptedPassword del usuario
+                newUser.Password = authService.HashPassword(newUser.Password);
 
             // Si hay errores de validación, lanzar un AggregateError
             if (validationErrors.Count > 0)
                 throw AggregateError.Create(validationErrors);
 
-            // Hashear la contraseña del usuario y asignarla al campo EncryptedPassword del usuario
-            newUser.EncryptedPassword = authService.HashPassword(newUser.Password);
-
             // Agregar el usuario al repositorio y obtener el usuario registrado
-            var registeredUser = persistenceService.UserRepository.AddUser(newUser);
+            var registeredUser = await persistenceService.UserRepository.AddUser(newUser);
             // Verificar si el usuario registrado es nulo
             if (registeredUser == null)
                 // Lanzar un Error de aplicación si ocurrió un Error durante el registro del usuario
@@ -77,15 +78,16 @@ namespace ConsoleApplication.Layers {
             //#region Paso 1.2: Agregar roles al usuario registrado
             Printer.PrintLine($"\n{"1.2. Agregando roles al usuario registrado [persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RolesAssignedToUser((int) registeredUser.ID!, roleID))]".Underline()}");
 
-            // DefaultRoles por defecto: [ 1=Administrator, 2=Moderator, 3=User, 4=Guest ]
+            // DefaultRoles por defecto: [ 1=Administrator, 2=Moderator, 3=Entity, 4=Guest ]
 
             // Agrega el rol [ 1 = Administrator ] al usuario registrado
             var roleID = 1;
-            var role = persistenceService.RoleRepository.GetRoleByID(roleID);
-            var roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser {
-                UserID = (int) registeredUser.ID!,
-                RoleID = (int) role.ID!
-            });
+            var role = await persistenceService.RoleRepository.GetRoleByID(roleID);
+            var roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser(
+                identifier: null,
+                userID: (int) registeredUser.ID!,
+                roleID: (int) role.ID!
+            ));
             if (roleAssignedToUser == null)
                 Printer.PrintLine($"- Ha ocurrido un Error mientras se asignaba el rol '{role.Name}' al usuario '{registeredUser.Username}'");
             else
@@ -93,23 +95,25 @@ namespace ConsoleApplication.Layers {
 
             // Agrega el rol [ 2 = Moderator ] al usuario registrado
             roleID = 2;
-            role = persistenceService.RoleRepository.GetRoleByID(roleID);
-            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser {
-                UserID = (int) registeredUser.ID!,
-                RoleID = (int) role.ID!
-            });
+            role = await persistenceService.RoleRepository.GetRoleByID(roleID);
+            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser(
+                identifier: null,
+                userID: (int) registeredUser.ID!,
+                roleID: (int) role.ID!
+            ));
             if (roleAssignedToUser == null)
                 Printer.PrintLine($"- Ha ocurrido un Error mientras se asignaba el rol '{role.Name}' al usuario '{registeredUser.Username}'");
             else
                 Printer.PrintLine($"- El rol '{role.Name}' cuyo ID es [{role.ID}] ha sido asignado al usuario '{registeredUser.Username}' exitosamente");
 
-            // Agrega el rol [ 3 = User ] al usuario registrado
+            // Agrega el rol [ 3 = Entity ] al usuario registrado
             roleID = 3;
-            role = persistenceService.RoleRepository.GetRoleByID(roleID);
-            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser {
-                UserID = (int) registeredUser.ID!,
-                RoleID = (int) role.ID!
-            });
+            role = await persistenceService.RoleRepository.GetRoleByID(roleID);
+            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser(
+                identifier: null,
+                userID: (int) registeredUser.ID!,
+                roleID: (int) role.ID!
+            ));
             if (roleAssignedToUser == null)
                 Printer.PrintLine($"- Ha ocurrido un Error mientras se asignaba el rol '{role.Name}' al usuario '{registeredUser.Username}'");
             else
@@ -122,10 +126,10 @@ namespace ConsoleApplication.Layers {
             Printer.PrintLine($"\n{"2. Autenticando el usuario registrado [authService.VerifyPassword(password, userByUsername.EncryptedPassword!)]".Underline()}");
             Printer.PrintLine($"- Usuario: {registeredUser.Username}");
             Printer.PrintLine($"- Contraseña: {registeredUser.Password}");
-            var userByUsername = persistenceService.UserRepository.GetUserByUsername(registeredUser.Username!);
+            var userByUsername = await persistenceService.UserRepository.GetUserByUsername(registeredUser.Username!);
             if (userByUsername == null)
                 throw new UnauthorizedAccessException($"No se ha encontrado ningún usuario cuyo nombre de usuario sea: {registeredUser.Username}");
-            else if (!authService.VerifyPassword(registeredUser.Password!, userByUsername.EncryptedPassword!))
+            else if (!authService.VerifyPassword(decryptedPassword, userByUsername.Password!))
                 throw new UnauthorizedAccessException("La contraseña es incorrecta");
 
             var accessToken = authService.GenerateToken(userByUsername);
@@ -136,7 +140,7 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 3: Consultar el usuario registrado según su ID
             Printer.PrintLine($"\n{"3. Consultando el usuario registrado según su ID [persistenceService.UserRepository.GetUserByID((int) userByUsername.ID!)]".Underline()}");
-            var foundUser = persistenceService.UserRepository.GetUserByID((int) userByUsername.ID!);
+            var foundUser = await persistenceService.UserRepository.GetUserByID((int) userByUsername.ID!);
             if (foundUser == null)
                 throw NotFoundError.Create(userByUsername.GetType().Name, (int) userByUsername.ID!);
             else {
@@ -146,8 +150,8 @@ namespace ConsoleApplication.Layers {
             #endregion
 
             #region Paso 4: Actualizar el usuario registrado
-            Printer.PrintLine($"\n{"4. Actualizando el usuario registrado [persistenceService.UserRepository.UpdateUser(new User { ID = foundUser.ID, Name = $\"{foundUser.Name} Arredondo\" })]".Underline()}");
-            var updatedUser = persistenceService.UserRepository.UpdateUser(new User { ID = foundUser.ID, Name = $"{foundUser.Name} Arredondo" });
+            Printer.PrintLine($"\n{"4. Actualizando el usuario registrado [persistenceService.UserRepository.UpdateUser(new Entity { ID = foundUser.ID, Name = $\"{foundUser.Name} Arredondo\" })]".Underline()}");
+            var updatedUser = await persistenceService.UserRepository.UpdateUser(new User { ID = foundUser.ID, Name = $"{foundUser.Name} Arredondo" }.AsPartial(user => user.Name));
             if (updatedUser == null)
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, $"Ha ocurrido un Error mientras se actualizaba el usuario cuyo ID es: {foundUser.ID}");
             else {
@@ -158,7 +162,7 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 5: Consultar todos los usuarios después de la actualización del usuario registrado
             Printer.PrintLine($"\n{"5. Consultando todos los usuarios después de la actualización del usuario registrado [persistenceService.UserRepository.GetUsers()]".Underline()}");
-            var usersAfterUpdate = persistenceService.UserRepository.GetUsers();
+            var usersAfterUpdate = await persistenceService.UserRepository.GetUsers();
             if (usersAfterUpdate == null || usersAfterUpdate.Count == 0)
                 Printer.PrintLine("No hay usuarios en la base de datos");
             else {
@@ -170,7 +174,7 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 6: Eliminar el usuario registrado según su ID 
             Printer.PrintLine($"\n{"6. Eliminando el usuario registrado según su ID [persistenceService.UserRepository.DeleteUserByID((int) updatedUser.ID!)]".Underline()}");
-            var isDeleted = persistenceService.UserRepository.DeleteUserByID((int) updatedUser.ID!);
+            var isDeleted = await persistenceService.UserRepository.DeleteUserByID((int) updatedUser.ID!);
             if (!isDeleted)
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, $"Ha ocurrido un Error mientras se eliminaba el usuario cuyo ID es: {updatedUser.ID}");
             else
@@ -179,7 +183,7 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 7: Consultar todos los usuarios nuevamente después de la eliminación del usuario registrado
             Printer.PrintLine($"\n{"7. Consultando todos los usuarios nuevamente después de la eliminación del usuario registrado [persistenceService.UserRepository.GetUsers()]".Underline()}");
-            var remainingUsers = persistenceService.UserRepository.GetUsers();
+            var remainingUsers = await persistenceService.UserRepository.GetUsers();
             if (remainingUsers == null || remainingUsers.Count == 0)
                 Printer.PrintLine("No hay usuarios en la base de datos");
             else {

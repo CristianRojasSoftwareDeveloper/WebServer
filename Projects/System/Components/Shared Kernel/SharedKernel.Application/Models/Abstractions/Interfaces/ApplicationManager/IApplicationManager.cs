@@ -1,8 +1,11 @@
-﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operations.Operators;
+﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Generic.Operations;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Permissions;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Roles;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.SystemLogs;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Users;
 using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Auth;
 using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence;
 using SharedKernel.Application.Models.Abstractions.Operations;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests;
 
 namespace SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager {
 
@@ -42,16 +45,6 @@ namespace SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationMan
         ISystemLogOperator SystemLogOperator { get; }
 
         /// <summary>
-        /// Ejecuta una operación de manera síncrona.
-        /// </summary>
-        /// <typeparam name="OperationType">El tipo de la operación a ejecutar.</typeparam>
-        /// <typeparam name="ResponseType">El tipo de la respuesta esperada de la operación.</typeparam>
-        /// <param name="operation">La operación que se desea ejecutar.</param>
-        /// <param name="accessToken">El token de acceso utilizado para validar permisos y claims.</param>
-        /// <returns>La respuesta de la operación ejecutada.</returns>
-        Response<ResponseType> ExecuteSynchronousOperation<OperationType, ResponseType> (OperationType operation, string? accessToken = null) where OperationType : Operation;
-
-        /// <summary>
         /// Ejecuta una operación de manera asíncrona.
         /// </summary>
         /// <typeparam name="OperationType">El tipo de la operación a ejecutar.</typeparam>
@@ -59,7 +52,7 @@ namespace SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationMan
         /// <param name="operation">La operación que se desea ejecutar.</param>
         /// <param name="accessToken">El token de acceso utilizado para validar permisos y claims.</param>
         /// <returns>Una tarea que representa la respuesta de la operación ejecutada.</returns>
-        Task<Response<ResponseType>> ExecuteAsynchronousOperation<OperationType, ResponseType> (OperationType operation, string? accessToken = null) where OperationType : Operation;
+        Task<Response<ResponseType>> ExecuteOperation<OperationType, ResponseType> (OperationType operation, string? accessToken = null) where OperationType : IOperation;
 
     }
 

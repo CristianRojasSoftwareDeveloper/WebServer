@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SharedKernel.Application.Models.Abstractions.Attributes;
-using SharedKernel.Application.Models.Abstractions.Enumerations;
+using SharedKernel.Domain.Models.Abstractions.Attributes;
+using SharedKernel.Domain.Models.Abstractions.Enumerations;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
 using System.Reflection;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts.EntityTypeConfigurations {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts.EntityTypeConfigurations {
 
     public class Permission_EntityTypeConfiguration : IEntityTypeConfiguration<Permission> {
 
         /// <summary>
-        /// Configura la entidad `Permission` y sus propiedades en el modelo de la base de datos.
+        /// Configura la entidad `Entity` y sus propiedades en el modelo de la base de datos.
         /// </summary>
         /// <param name="permissionModelBuilder">Generador de modelo de permisos de usuario.</param>
         public void Configure (EntityTypeBuilder<Permission> permissionModelBuilder) {
@@ -43,10 +43,10 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
         /// <param name="permissionModelBuilder">Generador de modelo de permisos de usuario.</param>
         private static void InitializeData (EntityTypeBuilder<Permission> permissionModelBuilder) {
 
-            var permissions = Enum.GetValues<Permissions>()
-                .Where(p => p != Permissions.None)
+            var permissions = Enum.GetValues<SystemPermissions>()
+                .Where(p => p != SystemPermissions.None)
                 .Select(permission => {
-                    var metadata = typeof(Permissions).GetField(permission.ToString())!.GetCustomAttribute<PermissionAttribute>() ??
+                    var metadata = typeof(SystemPermissions).GetField(permission.ToString())!.GetCustomAttribute<PermissionAttribute>() ??
                         throw new InvalidOperationException($"El permiso {permission} no tiene definidos los metadatos requeridos.");
                     return new Permission {
                         ID = (int) permission,

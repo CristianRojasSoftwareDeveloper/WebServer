@@ -1,16 +1,17 @@
 using SharedKernel.Application.Models.Abstractions.Attributes;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operations.Operators;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Roles;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Roles.Operations.CRUD.Commands;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Roles.Operations.CRUD.Queries;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Roles.Operations.Use_Cases.Commands;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Operators.Roles.Operations.Use_Cases.Queries;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
 using SharedKernel.Application.Models.Abstractions.Operations;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Generic.CRUD.Commands;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Generic.CRUD.Queries;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Roles.CRUD.Commands;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Roles.CRUD.Queries;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Roles.UseCases.Commands;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Roles.UseCases.Queries;
 using SharedKernel.Application.Operators.Generic;
+using SharedKernel.Application.Operators.Generic.Operations.CRUD.Commands.DeleteEntityByID;
+using SharedKernel.Application.Operators.Generic.Operations.CRUD.Queries.GetEntities;
+using SharedKernel.Application.Operators.Generic.Operations.CRUD.Queries.GetEntityByID;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
-using Users.Application.Operators.Roles.UseCases;
+using Users.Application.Operators.Roles.Operations;
 
 namespace Users.Application.Operators.Roles {
 
@@ -19,7 +20,7 @@ namespace Users.Application.Operators.Roles {
     /// </summary>
     public class RoleOperator : GenericOperator<Role>, IRoleOperator {
 
-        private Roles_UseCases _useCases { get; }
+        private Roles_OperationHandlers _useCases { get; }
 
         /// <summary>
         /// Constructor que inicializa el operador de role con un repositorio específico de roles.
@@ -28,94 +29,50 @@ namespace Users.Application.Operators.Roles {
         public RoleOperator (IRoleRepository roleRepository, IPermissionRepository permissionRepository, IPermissionsAssignedToRoleRepository permissionAssignedToRoleRepository, IRoleAssignedToUserRepository roleAssignedToUserRepository, bool detailedLog = false) : base((IGenericRepository<Role>) roleRepository, detailedLog) {
             if (roleRepository is null)
                 throw new ArgumentNullException(nameof(roleRepository));
-            _useCases = new Roles_UseCases(roleRepository, permissionRepository, roleAssignedToUserRepository, permissionAssignedToRoleRepository);
+            _useCases = new Roles_OperationHandlers(roleRepository, permissionRepository, roleAssignedToUserRepository, permissionAssignedToRoleRepository);
         }
-
-        #region Métodos síncronos
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<Role> AddRole (AddRole_Command command) =>
-            Executor.ExecuteSynchronousOperation(_useCases.AddRole.Handle, command, _detailedLog);
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<List<Role>> GetRoles (GetRoles_Query query) =>
-            GetEntities(new GetEntities_Query<Role>());
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<Role> GetRoleByID (GetRoleByID_Query query) =>
-            GetEntityByID(new GetEntityByID_Query<Role>(query.RoleID));
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<List<Role>> GetRolesByUserID (GetRolesByUserID_Query query) =>
-            Executor.ExecuteSynchronousOperation(_useCases.GetRolesByUserID.Handle, query, _detailedLog);
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<Role> UpdateRole (UpdateRole_Command command) =>
-            Executor.ExecuteSynchronousOperation(_useCases.UpdateRole.Handle, command, _detailedLog);
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<bool> DeleteRoleByID (DeleteRoleByID_Command command) =>
-            DeleteEntityByID(new DeleteEntityByID_Command<Role>(command.RoleID));
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<PermissionAssignedToRole> AddPermissionToRole (AddPermissionToRole_Command command) =>
-            Executor.ExecuteSynchronousOperation(_useCases.AddPermissionToRole.Handle, command, _detailedLog);
-
-        /// <inheritdoc />
-        [OperationHandler]
-        public Response<bool> RemovePermissionFromRole (RemovePermissionFromRole_Command command) =>
-            Executor.ExecuteSynchronousOperation(_useCases.RemovePermissionFromRole.Handle, command, _detailedLog);
-
-        #endregion
 
         #region Métodos asíncronos
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<Role>> AddRoleAsync (AddRole_Command command) =>
-            Executor.ExecuteAsynchronousOperation(_useCases.AddRole.HandleAsync, command, _detailedLog);
+        public Task<Response<Role>> AddRole (IAddRole_Command command) =>
+            Executor.ExecuteOperation(_useCases.AddRole.Handle, command, _detailedLog);
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<List<Role>>> GetRolesAsync (GetRoles_Query query) =>
-            GetEntitiesAsync(new GetEntities_Query<Role>());
+        public Task<Response<List<Role>>> GetRoles (IGetRoles_Query query) =>
+            GetEntities(new GetEntities_Query(query.EnableTracking));
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<Role>> GetRoleByIDAsync (GetRoleByID_Query query) =>
-            GetEntityByIDAsync(new GetEntityByID_Query<Role>(query.RoleID));
+        public Task<Response<Role>> GetRoleByID (IGetRoleByID_Query query) =>
+            GetEntityByID(new GetEntityByID_Query(query.ID, query.EnableTracking));
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<List<Role>>> GetRolesByUserIDAsync (GetRolesByUserID_Query query) =>
-            Executor.ExecuteAsynchronousOperation(_useCases.GetRolesByUserID.HandleAsync, query, _detailedLog);
+        public Task<Response<List<Role>>> GetRolesByUserID (IGetRolesByUserID_Query query) =>
+            Executor.ExecuteOperation(_useCases.GetRolesByUserID.Handle, query, _detailedLog);
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<Role>> UpdateRoleAsync (UpdateRole_Command command) =>
-            Executor.ExecuteAsynchronousOperation(_useCases.UpdateRole.HandleAsync, command, _detailedLog);
+        public Task<Response<Role>> UpdateRole (IUpdateRole_Command command) =>
+            Executor.ExecuteOperation(_useCases.UpdateRole.Handle, command, _detailedLog);
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<bool>> DeleteRoleByIDAsync (DeleteRoleByID_Command command) =>
-            DeleteEntityByIDAsync(new DeleteEntityByID_Command<Role>(command.RoleID));
+        public Task<Response<bool>> DeleteRoleByID (IDeleteRoleByID_Command command) =>
+            DeleteEntityByID(new DeleteEntityByID_Command(command.ID));
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<PermissionAssignedToRole>> AddPermissionToRoleAsync (AddPermissionToRole_Command command) =>
-            Executor.ExecuteAsynchronousOperation(_useCases.AddPermissionToRole.HandleAsync, command, _detailedLog);
+        public Task<Response<PermissionAssignedToRole>> AddPermissionToRole (IAddPermissionToRole_Command command) =>
+            Executor.ExecuteOperation(_useCases.AddPermissionToRole.Handle, command, _detailedLog);
 
         /// <inheritdoc />
         [OperationHandler]
-        public Task<Response<bool>> RemovePermissionFromRoleAsync (RemovePermissionFromRole_Command command) =>
-            Executor.ExecuteAsynchronousOperation(_useCases.RemovePermissionFromRole.HandleAsync, command, _detailedLog);
+        public Task<Response<bool>> RemovePermissionFromRole (IRemovePermissionFromRole_Command command) =>
+            Executor.ExecuteOperation(_useCases.RemovePermissionFromRole.Handle, command, _detailedLog);
 
         #endregion
 

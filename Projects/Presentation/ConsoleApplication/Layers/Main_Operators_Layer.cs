@@ -1,12 +1,15 @@
 ﻿using ConsoleApplication.Utils;
 using SharedKernel.Application.Models.Abstractions.Errors;
 using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Users.CRUD.Commands;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Users.CRUD.Queries;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests.Operators.Users.UseCases.Queries;
 using SharedKernel.Application.Utils.Extensions;
 using SharedKernel.Domain.Models.Entities.Users;
 using System.Net;
+using Users.Application.Operators.Users.Operations.CRUD.Commands.DeleteUserByID;
+using Users.Application.Operators.Users.Operations.CRUD.Commands.RegisterUser;
+using Users.Application.Operators.Users.Operations.CRUD.Commands.UpdateUser;
+using Users.Application.Operators.Users.Operations.CRUD.Queries.GetUserByID;
+using Users.Application.Operators.Users.Operations.CRUD.Queries.GetUsers;
+using Users.Application.Operators.Users.Operations.Use_Cases.Queries.AuthenticateUser;
 
 namespace ConsoleApplication.Layers {
 
@@ -17,7 +20,7 @@ namespace ConsoleApplication.Layers {
         /// Punto de entrada principal de la aplicación de consola.
         /// </summary>
         /// <param name="args">Argumentos de la línea de comandos.</param>
-        internal static void ExecuteTestFlow (IApplicationManager applicationManager) {
+        internal static async Task ExecuteTestFlow (IApplicationManager applicationManager) {
 
             Printer.PrintLine($"\n{"Iniciando el flujo de operaciones de prueba de la capa de operadores del sistema (también llamada capa de aplicación/casos de uso en Arquitectura Limpia)".Underline()}");
 
@@ -31,14 +34,14 @@ namespace ConsoleApplication.Layers {
                 Email = "cristian.rojas.software.developer@gmail.com"
             };
 
-            // Agregando roles al usuario (DefaultRoles por defecto: [ 1=Administrator, 2=Moderator, 3=User, 4=Guest ])
+            // Agregando roles al usuario (DefaultRoles por defecto: [ 1=Administrator, 2=Moderator, 3=Entity, 4=Guest ])
             int[] roleAssignedToUser = [1, 2, 3];
-            var registerUser_Response = applicationManager.UserOperator.RegisterUser(new RegisterUser_Command(newUser, roleAssignedToUser));
+            var registerUser_Response = await applicationManager.UserOperator.RegisterUser(new RegisterUser_Command(newUser, roleAssignedToUser));
             if (registerUser_Response == null || registerUser_Response.Body == null)
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, "La respuesta a la operación de registro de usuario en la base de datos no es válida");
 
             var registeredUser = registerUser_Response.Body;
-            Printer.PrintLine($"Se ha registrado el usuario {registeredUser.Username} correctamente");
+            Printer.PrintLine($"Se ha registrado el usuario {registeredUser.Username} exitosamente");
             registeredUser.PrintUser();
             #endregion
 
@@ -49,7 +52,7 @@ namespace ConsoleApplication.Layers {
             var password = "secret-key";
             Printer.PrintLine($"\n- Usuario: {username}\n- Contraseña: {password}");
 
-            var accessToken = applicationManager.UserOperator.AuthenticateUser(new AuthenticateUser_Query(newUser.Username, newUser.Password)).Body;
+            var accessToken = (await applicationManager.UserOperator.AuthenticateUser(new AuthenticateUser_Query(newUser.Username, newUser.Password))).Body;
 
             Printer.PrintLine($"\n- Token: {accessToken}");
             Printer.PrintLine($"\n- Token desencriptado:\n{applicationManager.AuthService.ValidateToken(accessToken)}");
@@ -57,7 +60,7 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 3: Consultar el usuario registrado según su ID
             Printer.PrintLine($"\n{"3. Consultando el usuario registrado por su ID [applicationManager.UserOperator.GetUserByID(new GetUserByID_Query((int) registeredUser.ID!))]".Underline()}");
-            var foundUser = applicationManager.UserOperator.GetUserByID(new GetUserByID_Query((int) registeredUser.ID!)).Body;
+            var foundUser = (await applicationManager.UserOperator.GetUserByID(new GetUserByID_Query((int) registeredUser.ID!, true))).Body;
             if (foundUser != null) {
                 Printer.PrintLine("Usuario encontrado:");
                 foundUser.PrintUser();
@@ -67,10 +70,10 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 4: Actualizar el usuario registrado
             if (foundUser != null) {
-                Printer.PrintLine($"\n{"4. Actualizando el usuario registrado [applicationManager.UserOperator.UpdateUser(new UpdateUser_Command(new User { ID = foundUser.ID, Name = \"Cristian Rojas Arredondo\" }))]".Underline()}");
-                var updatedUserResponse = applicationManager.UserOperator.UpdateUser(new UpdateUser_Command(new User { ID = foundUser.ID, Name = "Cristian Rojas Arredondo" }));
+                Printer.PrintLine($"\n{"4. Actualizando el usuario registrado [applicationManager.UserOperator.UpdateUser(new UpdateUser_Command(new Entity { ID = foundUser.ID, Name = \"Cristian Rojas Arredondo\" }))]".Underline()}");
+                var updatedUserResponse = await applicationManager.UserOperator.UpdateUser(new UpdateUser_Command(new User { ID = foundUser.ID, Name = "Cristian Rojas Arredondo" }.AsPartial(user => user.Name)));
                 if (updatedUserResponse != null && updatedUserResponse.Body != null) {
-                    Printer.PrintLine("Usuario actualizado correctamente:");
+                    Printer.PrintLine("Usuario actualizado exitosamente:");
                     updatedUserResponse.Body.PrintUser();
                 } else
                     Printer.PrintLine($"No se pudo actualizar el usuario con el ID: {foundUser.ID}");
@@ -79,7 +82,7 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 5: Consultar todos los usuarios después de la actualización del usuario registrado
             Printer.PrintLine($"\n{"5. Consultando todos los usuarios después de la actualización [applicationManager.UserOperator.GetUsers()]".Underline()}");
-            var getUsersResponse = applicationManager.UserOperator.GetUsers();
+            var getUsersResponse = await applicationManager.UserOperator.GetUsers(new GetUsers_Query());
             if (getUsersResponse == null)
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, "La respuesta a la consulta para obtener los usuarios de la base de datos no es válida");
             var usersAfterUpdate = getUsersResponse.Body;
@@ -93,19 +96,19 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 6: Eliminar el usuario registrado según su ID
             Printer.PrintLine($"\n{"6. Eliminando el usuario registrado según su ID [applicationManager.UserOperator.DeleteUserByID(new DeleteUserByID_Command((int) registeredUser.ID))]".Underline()}");
-            var deleteUserByID_Response = applicationManager.UserOperator.DeleteUserByID(new DeleteUserByID_Command((int) registeredUser.ID));
+            var deleteUserByID_Response = await applicationManager.UserOperator.DeleteUserByID(new DeleteUserByID_Command((int) registeredUser.ID));
             if (deleteUserByID_Response == null)
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, "La respuesta a la operación de eliminación de un usuario de la base de datos según su ID no es válida");
             var isDeleted = deleteUserByID_Response.Body;
             if (isDeleted)
-                Printer.PrintLine($"Usuario con ID: {registeredUser.ID} eliminado correctamente");
+                Printer.PrintLine($"Usuario con ID: {registeredUser.ID} eliminado exitosamente");
             else
                 Printer.PrintLine($"No se pudo eliminar el usuario con el ID: {registeredUser.ID}");
             #endregion
 
             #region Paso 7: Consultar todos los usuarios nuevamente después de la eliminación del usuario registrado
             Printer.PrintLine($"\n{"7. Consultando todos los usuarios después de la eliminación [applicationManager.UserOperator.GetUsers()]".Underline()}");
-            var remainingUsers_Response = applicationManager.UserOperator.GetUsers();
+            var remainingUsers_Response = await applicationManager.UserOperator.GetUsers(new GetUsers_Query());
             if (remainingUsers_Response == null)
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, "La respuesta a la consulta de todos los usuarios de la base de datos no es válida");
             var remainingUsers = remainingUsers_Response.Body;

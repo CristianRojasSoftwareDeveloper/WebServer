@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\Abstractions\Operations\Requests\Operators\Permissions\Use Cases\Commands\" />
-    <Folder Include="Models\Abstractions\Operations\Requests\Operators\System Logs\Use Cases\Commands\" />
+    <Folder Include="Models\Abstractions\Interfaces\ApplicationManager\Operators\Permissions\Operations\Use Cases\Commands\" />
+    <Folder Include="Models\Abstractions\Interfaces\ApplicationManager\Operators\SystemLogs\Operations\Use Cases\Commands\" />
   </ItemGroup>
 
 </Project>

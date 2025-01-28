@@ -22,9 +22,9 @@ services:
       - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS} # Argumentos de inicialización de PostgreSQL.
     ports:
       - ${DATABASE_SERVICE_EXPOSED_PORT}:${DATABASE_SERVICE_EXPOSED_PORT} # Database Port
-    volumes:
-      - postgre-sql_data:/var/lib/postgresql/data # Conserva los datos de la base de datos entre distintas versiones del contenedor.
-      #   - ./db-container_initializer.sql:/docker-entrypoint-initdb.d/database_initializer.sql # Carga el script de inicialización de la base de datos al contenedor. Importante: Solo se utiliza para inicializar la base de datos si "/var/lib/postgresql/data" está vacío.
+    # volumes:
+    #   - postgre-sql_data:/var/lib/postgresql/data # Conserva los datos de la base de datos entre distintas versiones del contenedor.
+    #   #   - ./db-container_initializer.sql:/docker-entrypoint-initdb.d/database_initializer.sql # Carga el script de inicialización de la base de datos al contenedor. Importante: Solo se utiliza para inicializar la base de datos si "/var/lib/postgresql/data" está vacío.
     networks:
       - web-system-network # Asigna el contenedor a la red denominada "web-system-network".
 
@@ -33,7 +33,7 @@ networks:
   web-system-network:
     name: web-system-network # Nombre de la red utilizada para conectar el contenedor a otros servicios o contenedores.
 
-# Definición de volúmenes.
-volumes:
-  postgre-sql_data:
-    name: web-system-network_postgre-sql_data # Nombre del volúmen creado para conservar los datos entre distintas instancias del contenedor.
+# # Definición de volúmenes.
+# volumes:
+#   postgre-sql_data:
+#     name: web-system-network_postgre-sql_data # Nombre del volúmen creado para conservar los datos entre distintas instancias del contenedor.

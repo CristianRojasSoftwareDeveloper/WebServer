@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\Shared Kernel\SharedKernel.Domain\SharedKernel.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Operators\Permissions\Operations\Use Cases\Commands\" />
+  </ItemGroup>
+
 </Project>

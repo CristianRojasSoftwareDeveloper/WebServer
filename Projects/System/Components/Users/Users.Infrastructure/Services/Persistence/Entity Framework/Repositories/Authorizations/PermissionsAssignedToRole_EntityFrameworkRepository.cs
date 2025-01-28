@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
+using SharedKernel.Domain.Models.Abstractions;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
-using SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Repositories;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
 
-namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories.Authorizations {
+namespace Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories.Authorizations {
 
     /// <summary>
     /// Implementación abstracta de un repositorio genérico utilizando Entity Framework.
@@ -15,73 +17,38 @@ namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories
         /// Inicializa una nueva instancia del repositorio genérico.
         /// </summary>
         /// <param name="dbContext">El contexto de base de datos de Entity Framework.</param>
-        public PermissionsAssignedToRole_EntityFrameworkRepository (DbContext dbContext) : base(dbContext) { }
-
-        #region Métodos síncronos
-
-        /// <inheritdoc />
-        public PermissionAssignedToRole AddPermissionAssignedToRole (PermissionAssignedToRole newPermissionAssignedToRole) =>
-            AddEntity(newPermissionAssignedToRole, true, true);
-
-        /// <inheritdoc />
-        public List<PermissionAssignedToRole> GetPermissionAssignedToRoles () =>
-            GetEntities();
-
-        public List<PermissionAssignedToRole> GetPermissionAssignedToRolesByRoleID (int roleID) =>
-            GetQueryable().
-            Where(rp => rp.RoleID == roleID).
-            Include(rp => rp.Permission).
-            ToList();
-
-        /// <inheritdoc />
-        public PermissionAssignedToRole GetPermissionAssignedToRoleByID (int permissionAssignedToRoleID) =>
-            GetEntityByID(permissionAssignedToRoleID);
-
-        public PermissionAssignedToRole GetPermissionAssignedToRoleByForeignKeys (int roleID, int permissionID) =>
-            GetQueryable().
-            FirstOrDefault(permissionAssignedToRole => permissionAssignedToRole.RoleID == roleID && permissionAssignedToRole.PermissionID == permissionID);
-
-        /// <inheritdoc />
-        public PermissionAssignedToRole UpdatePermissionAssignedToRole (PermissionAssignedToRole permissionAssignedToRoleUpdate) =>
-            UpdateEntity(permissionAssignedToRoleUpdate, trySetUpdateDatetime: true);
-
-        /// <inheritdoc />
-        public bool DeletePermissionAssignedToRoleByID (int permissionAssignedToRoleID) =>
-            DeleteEntityByID(permissionAssignedToRoleID);
-
-        #endregion
+        public PermissionsAssignedToRole_EntityFrameworkRepository (ApplicationDbContext dbContext) : base(dbContext) { }
 
         #region Métodos asíncronos
 
         /// <inheritdoc />
-        public Task<PermissionAssignedToRole> AddPermissionAssignedToRoleAsync (PermissionAssignedToRole newPermissionAssignedToRole) =>
-            AddEntityAsync(newPermissionAssignedToRole, true, true);
+        public Task<PermissionAssignedToRole> AddPermissionAssignedToRole (PermissionAssignedToRole newPermissionAssignedToRole) =>
+            AddEntity(newPermissionAssignedToRole);
 
         /// <inheritdoc />
-        public Task<List<PermissionAssignedToRole>> GetPermissionAssignedToRolesAsync () =>
-            GetEntitiesAsync();
+        public Task<List<PermissionAssignedToRole>> GetPermissionAssignedToRoles (bool enableTracking = false) =>
+            GetEntities(enableTracking);
 
-        public Task<List<PermissionAssignedToRole>> GetPermissionAssignedToRolesByRoleIDAsync (int roleID) =>
-            GetQueryable().
-            Where(rp => rp.RoleID == roleID).
-            Include(rp => rp.Permission).
+        /// <inheritdoc />
+        public Task<PermissionAssignedToRole?> GetPermissionAssignedToRoleByID (int permissionAssignedToRoleID, bool enableTracking = false) =>
+            GetEntityByID(permissionAssignedToRoleID, enableTracking);
+
+        public Task<List<PermissionAssignedToRole>> GetPermissionAssignedToRolesByRoleID (int roleID, bool enableTracking = false) =>
+            GetQueryable(enableTracking).
+            Where(permissionAssignedToRole => permissionAssignedToRole.RoleID == roleID).
+            Include(permissionAssignedToRole => permissionAssignedToRole.Permission).
             ToListAsync();
 
-        /// <inheritdoc />
-        public Task<PermissionAssignedToRole> GetPermissionAssignedToRoleByIDAsync (int permissionAssignedToRoleID) =>
-            GetEntityByIDAsync(permissionAssignedToRoleID);
-
-        public Task<PermissionAssignedToRole> GetPermissionAssignedToRoleByForeignKeysAsync (int roleID, int permissionID) =>
-            GetQueryable().
-            FirstOrDefaultAsync(permissionAssignedToRole => permissionAssignedToRole.RoleID == roleID && permissionAssignedToRole.PermissionID == permissionID);
+        public Task<PermissionAssignedToRole?> GetPermissionAssignedToRoleByForeignKeys (int roleID, int permissionID, bool enableTracking = false) =>
+            FirstOrDefault(permissionAssignedToRole => permissionAssignedToRole.RoleID == roleID && permissionAssignedToRole.PermissionID == permissionID, enableTracking);
 
         /// <inheritdoc />
-        public Task<PermissionAssignedToRole> UpdatePermissionAssignedToRoleAsync (PermissionAssignedToRole permissionAssignedToRoleUpdate) =>
-            UpdateEntityAsync(permissionAssignedToRoleUpdate, trySetUpdateDatetime: true);
+        public Task<PermissionAssignedToRole> UpdatePermissionAssignedToRole (Partial<PermissionAssignedToRole> permissionAssignedToRoleUpdate) =>
+            UpdateEntity(permissionAssignedToRoleUpdate);
 
         /// <inheritdoc />
-        public Task<bool> DeletePermissionAssignedToRoleByIDAsync (int permissionAssignedToRoleID) =>
-            DeleteEntityByIDAsync(permissionAssignedToRoleID);
+        public Task<bool> DeletePermissionAssignedToRoleByID (int permissionAssignedToRoleID) =>
+            DeleteEntityByID(permissionAssignedToRoleID);
 
         #endregion
 

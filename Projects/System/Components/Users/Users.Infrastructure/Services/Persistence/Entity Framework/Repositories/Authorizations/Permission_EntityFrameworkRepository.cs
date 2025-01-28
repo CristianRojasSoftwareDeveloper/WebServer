@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
+﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
+using SharedKernel.Domain.Models.Abstractions;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
-using SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Repositories;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
 
-namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories.Authorizations {
+namespace Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories.Authorizations {
 
     /// <summary>
     /// Implementación abstracta de un repositorio genérico utilizando Entity Framework.
@@ -15,53 +16,29 @@ namespace Users.Infrastructure.Services.Persistence.EntityFramework.Repositories
         /// Inicializa una nueva instancia del repositorio genérico.
         /// </summary>
         /// <param name="dbContext">El contexto de base de datos de Entity Framework.</param>
-        public Permission_EntityFrameworkRepository (DbContext dbContext) : base(dbContext) { }
-
-        #region Métodos síncronos
-
-        /// <inheritdoc />
-        public Permission AddPermission (Permission newPermission) =>
-            AddEntity(newPermission, true, true);
-
-        /// <inheritdoc />
-        public List<Permission> GetPermissions () =>
-            GetEntities();
-
-        /// <inheritdoc />
-        public Permission GetPermissionByID (int permissionID) =>
-            GetEntityByID(permissionID);
-
-        /// <inheritdoc />
-        public Permission UpdatePermission (Permission permissionUpdate) =>
-            UpdateEntity(permissionUpdate, trySetUpdateDatetime: true);
-
-        /// <inheritdoc />
-        public bool DeletePermissionByID (int permissionID) =>
-            DeleteEntityByID(permissionID);
-
-        #endregion
+        public Permission_EntityFrameworkRepository (ApplicationDbContext dbContext) : base(dbContext) { }
 
         #region Métodos asíncronos
 
         /// <inheritdoc />
-        public Task<Permission> AddPermissionAsync (Permission newPermission) =>
-            AddEntityAsync(newPermission, true, true);
+        public Task<Permission> AddPermission (Permission newPermission) =>
+            AddEntity(newPermission);
 
         /// <inheritdoc />
-        public Task<List<Permission>> GetPermissionsAsync () =>
-            GetEntitiesAsync();
+        public Task<List<Permission>> GetPermissions (bool enableTracking = false) =>
+            GetEntities(enableTracking);
 
         /// <inheritdoc />
-        public Task<Permission> GetPermissionByIDAsync (int permissionID) =>
-            GetEntityByIDAsync(permissionID);
+        public Task<Permission?> GetPermissionByID (int permissionID, bool enableTracking = false) =>
+            GetEntityByID(permissionID, enableTracking);
 
         /// <inheritdoc />
-        public Task<Permission> UpdatePermissionAsync (Permission permissionUpdate) =>
-            UpdateEntityAsync(permissionUpdate, trySetUpdateDatetime: true);
+        public Task<Permission> UpdatePermission (Partial<Permission> permissionUpdate) =>
+            UpdateEntity(permissionUpdate);
 
         /// <inheritdoc />
-        public Task<bool> DeletePermissionByIDAsync (int permissionID) =>
-            DeleteEntityByIDAsync(permissionID);
+        public Task<bool> DeletePermissionByID (int permissionID) =>
+            DeleteEntityByID(permissionID);
 
         #endregion
 

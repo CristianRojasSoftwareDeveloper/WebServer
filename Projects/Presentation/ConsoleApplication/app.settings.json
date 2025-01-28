@@ -1,6 +1,7 @@
 {
   "ConnectionStrings": {
-    "PostgreSQL": "Host=postgresql-web-service.postgres.database.azure.com;Port=5432;Database=web_system_db;Username=SuperAdmin;Password=Root2025"
+    "PostgreSQL": "Host=localhost;Port=5432;Database=web_system_db;Username=SuperAdmin;Password=Root2025;Include Error Detail=true;"
+    //"PostgreSQL": "Host=postgresql-web-service.postgres.database.azure.com;Port=5432;Database=web_system_db;Username=SuperAdmin;Password=Root2025"
   },
   "JWT_Settings": {
     "Key": "2BYTlejp9Bk20qEyHvzfyReyHBTMkgnJvkVCbqko/SQ=",

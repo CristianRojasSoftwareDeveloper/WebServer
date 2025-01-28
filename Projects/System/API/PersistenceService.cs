@@ -1,9 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
-using SystemLogs.Infrastructure.Services.Persistence.EntityFramework.Repositories;
-using Users.Infrastructure.Services.Persistence.EntityFramework.Repositories;
-using Users.Infrastructure.Services.Persistence.EntityFramework.Repositories.Authorizations;
+﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence;
+using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
+using SystemLogs.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
+using Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
+using Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories.Authorizations;
 
 namespace API {
 
@@ -34,7 +34,7 @@ namespace API {
         /// Inicializa una nueva instancia de PersistenceService.
         /// </summary>
         /// <param name="databaseInstance">Repositorio de usuarios.</param>
-        public PersistenceService (DbContext databaseInstance) {
+        public PersistenceService (ApplicationDbContext databaseInstance) {
             ArgumentNullException.ThrowIfNull(databaseInstance, nameof(databaseInstance));
             databaseInstance.Database.EnsureCreated();
             // Inicializa los servicios de persistencia (Repositorios)

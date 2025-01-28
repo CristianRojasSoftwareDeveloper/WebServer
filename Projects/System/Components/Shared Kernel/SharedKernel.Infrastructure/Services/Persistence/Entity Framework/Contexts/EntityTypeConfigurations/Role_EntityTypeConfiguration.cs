@@ -1,16 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SharedKernel.Application.Models.Abstractions.Attributes;
-using SharedKernel.Application.Models.Abstractions.Enumerations;
+using SharedKernel.Domain.Models.Abstractions.Attributes;
+using SharedKernel.Domain.Models.Abstractions.Enumerations;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
 using System.Reflection;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts.EntityTypeConfigurations {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts.EntityTypeConfigurations {
 
     public class Role_EntityTypeConfiguration : IEntityTypeConfiguration<Role> {
 
         /// <summary>
-        /// Configura la entidad `Role` y sus propiedades en el modelo de la base de datos.
+        /// Configura la entidad `Entity` y sus propiedades en el modelo de la base de datos.
         /// </summary>
         /// <param name="roleModelBuilder">Generador de modelo de roles de usuario.</param>
         public void Configure (EntityTypeBuilder<Role> roleModelBuilder) {

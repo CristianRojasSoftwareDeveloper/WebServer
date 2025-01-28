@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts.EntityTypeConfigurations {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts.EntityTypeConfigurations {
 
     public class RoleAssignedToUser_EntityTypeConfiguration : IEntityTypeConfiguration<RoleAssignedToUser> {
 
@@ -29,7 +29,7 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
             // Configura la restricción de clave única para user_id y role_id combinados
             roleAssignedToUserModelBuilder.HasIndex(roleAssignedToUser => new { roleAssignedToUser.UserID, roleAssignedToUser.RoleID }).IsUnique();
 
-            // Configura la relación con la entidad User
+            // Configura la relación con la entidad Entity
             roleAssignedToUserModelBuilder.HasOne(roleAssignedToUser => roleAssignedToUser.User)
                   .WithMany(user => user.RolesAssignedToUser)
                   .HasForeignKey(roleAssignedToUser => roleAssignedToUser.UserID)
@@ -40,7 +40,7 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
             // con el objetivo de optimizar la búsqueda de user_role's asociados a un usuario específico.
             roleAssignedToUserModelBuilder.HasIndex(roleAssignedToUser => roleAssignedToUser.UserID).HasDatabaseName("idx_user_roles_user_id");
 
-            // Configura la relación con la entidad Role
+            // Configura la relación con la entidad Entity
             roleAssignedToUserModelBuilder.HasOne(roleAssignedToUser => roleAssignedToUser.Role)
                   .WithMany(role => role.RoleAssignedToUsers)
                   .HasForeignKey(roleAssignedToUser => roleAssignedToUser.RoleID)
@@ -63,11 +63,11 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
         private static void InitializeData (EntityTypeBuilder<RoleAssignedToUser> roleAssignedToUserModelBuilder) {
             // Semillas de datos para relaciones RolesAssignedToUser
             roleAssignedToUserModelBuilder.HasData([
-                new RoleAssignedToUser {
-                    ID = 1,
-                    UserID = 1,
-                    RoleID = 1
-                }
+                new RoleAssignedToUser(
+                    identifier : 1,
+                    userID : 1,
+                    roleID : 1
+                )
             ]);
         }
 

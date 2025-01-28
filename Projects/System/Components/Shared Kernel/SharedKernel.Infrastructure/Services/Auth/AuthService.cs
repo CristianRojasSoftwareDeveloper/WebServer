@@ -1,7 +1,7 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using SharedKernel.Application.Models.Abstractions.Enumerations;
 using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Auth;
-using SharedKernel.Application.Models.Abstractions.Operations.Requests;
+using SharedKernel.Application.Models.Abstractions.Operations;
+using SharedKernel.Domain.Models.Abstractions.Enumerations;
 using SharedKernel.Domain.Models.Entities.Users;
 using SharedKernel.Infrastructure.Services.Auth.Configurations;
 using System.IdentityModel.Tokens.Jwt;
@@ -101,7 +101,7 @@ namespace SharedKernel.Infrastructure.Services.Auth {
         /// </summary>
         private static List<Claim> BuildUserClaims (User user) {
             var claims = new List<Claim> {
-                new ("UserID", user.ID.ToString()!),
+                new ("ID", user.ID.ToString()!),
                 new ("Username", user.Username ?? throw new InvalidOperationException("El nombre de usuario no puede ser nulo")),
                 new ("Email", user.Email ?? throw new InvalidOperationException("El email no puede ser nulo"))
             };
@@ -113,7 +113,7 @@ namespace SharedKernel.Infrastructure.Services.Auth {
 
             // Extraer y agregar permisos como un único claim
             var permissions = ExtractUserPermissions(user);
-            claims.Add(new Claim("Permissions", string.Join(CLAIM_DELIMITER, permissions)));
+            claims.Add(new Claim("SystemPermissions", string.Join(CLAIM_DELIMITER, permissions)));
 
             return claims;
         }
@@ -121,12 +121,12 @@ namespace SharedKernel.Infrastructure.Services.Auth {
         /// <summary>
         /// Extrae los permisos de un usuario.
         /// </summary>
-        private static IEnumerable<Permissions> ExtractUserPermissions (User user) {
+        private static IEnumerable<SystemPermissions> ExtractUserPermissions (User user) {
             return user.RolesAssignedToUser
                 .Where(ur => ur?.Role?.PermissionAssignedToRoles != null)
                 .SelectMany(ur => ur.Role!.PermissionAssignedToRoles!)
                 .Where(rp => rp?.Permission != null)
-                .Select(rp => Enum.Parse<Permissions>(rp.Permission!.Name!))
+                .Select(rp => Enum.Parse<SystemPermissions>(rp.Permission!.Name!))
                 .Distinct();
         }
 
@@ -178,19 +178,19 @@ namespace SharedKernel.Infrastructure.Services.Auth {
         /// </summary>
         /// <exception cref="SecurityTokenException">
         /// Se lanza cuando:
-        /// - Faltan claims obligatorios (UserID, Username, Email, Roles, Permissions)
-        /// - El UserID no es un número válido
+        /// - Faltan claims obligatorios (ID, Username, Email, Roles, SystemPermissions)
+        /// - El ID no es un número válido
         /// - Los roles o permisos están vacíos
         /// - Hay permisos con formato inválido
         /// </exception>
         private static TokenClaims ExtractTokenClaims (IEnumerable<Claim> claims) {
 
             // Validar claims básicos obligatorios
-            var userIdClaim = claims.FirstOrDefault(c => c.Type == "UserID")
-                ?? throw new SecurityTokenException("El token no contiene el claim obligatorio «UserID»");
-            // Validar formato de UserID
+            var userIdClaim = claims.FirstOrDefault(c => c.Type == "ID")
+                ?? throw new SecurityTokenException("El token no contiene el claim obligatorio «ID»");
+            // Validar formato de ID
             if (!int.TryParse(userIdClaim.Value, out int userId))
-                throw new SecurityTokenException("El claim «UserID» no contiene un número válido");
+                throw new SecurityTokenException("El claim «ID» no contiene un número válido");
 
             var usernameClaim = claims.FirstOrDefault(c => c.Type == "Username")
                 ?? throw new SecurityTokenException("El token no contiene el claim obligatorio «Username»");
@@ -207,8 +207,8 @@ namespace SharedKernel.Infrastructure.Services.Auth {
                 throw new SecurityTokenException("El token debe contener al menos un rol");
 
             // Extraer y validar permisos
-            var permissionsClaim = claims.FirstOrDefault(claim => claim.Type == "Permissions")
-                ?? throw new SecurityTokenException("El token no contiene el claim obligatorio «Permissions»");
+            var permissionsClaim = claims.FirstOrDefault(claim => claim.Type == "SystemPermissions")
+                ?? throw new SecurityTokenException("El token no contiene el claim obligatorio «SystemPermissions»");
 
             var permissions = ParsePermissionsClaim(permissionsClaim.Value);
 
@@ -234,12 +234,12 @@ namespace SharedKernel.Infrastructure.Services.Auth {
         /// - Algún permiso no es válido
         /// - El formato de los permisos es inválido
         /// </exception>
-        private static IEnumerable<Permissions> ParsePermissionsClaim (string permissionsValue) {
+        private static IEnumerable<SystemPermissions> ParsePermissionsClaim (string permissionsValue) {
             try {
                 var permissions = permissionsValue
                     .Split(CLAIM_DELIMITER, StringSplitOptions.RemoveEmptyEntries)
                     .Select(permissionString =>
-                        Enum.TryParse<Permissions>(permissionString, out var permission) ? permission : throw new SecurityTokenException($"El permiso «{permissionString}» no es un valor válido de la enumeración Permissions"));
+                        Enum.TryParse<SystemPermissions>(permissionString, out var permission) ? permission : throw new SecurityTokenException($"El permiso «{permissionString}» no es un valor válido de la enumeración SystemPermissions"));
                 if (!permissions.Any())
                     throw new SecurityTokenException("El token debe contener al menos un permiso");
                 return permissions;

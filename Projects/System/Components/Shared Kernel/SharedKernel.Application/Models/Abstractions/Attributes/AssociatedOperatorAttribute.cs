@@ -28,7 +28,6 @@ namespace SharedKernel.Application.Models.Abstractions.Attributes {
         public AssociatedOperatorAttribute (Type operatorType) {
             if (!operatorType.IsInterface || !operatorType.Name.EndsWith("Operator"))
                 throw new ArgumentException("El tipo debe ser una interfaz de operador (debe terminar en 'Operator')", nameof(operatorType));
-
             OperatorType = operatorType;
         }
 

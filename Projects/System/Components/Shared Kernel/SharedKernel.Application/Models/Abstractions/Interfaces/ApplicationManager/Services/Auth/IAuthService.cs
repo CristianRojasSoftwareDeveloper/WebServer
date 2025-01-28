@@ -1,4 +1,4 @@
-﻿using SharedKernel.Application.Models.Abstractions.Operations.Requests;
+﻿using SharedKernel.Application.Models.Abstractions.Operations;
 using SharedKernel.Domain.Models.Entities.Users;
 
 namespace SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Auth {

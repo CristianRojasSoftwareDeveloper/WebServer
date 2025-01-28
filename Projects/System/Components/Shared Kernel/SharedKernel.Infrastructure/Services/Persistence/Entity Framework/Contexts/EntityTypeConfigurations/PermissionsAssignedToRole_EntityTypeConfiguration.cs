@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SharedKernel.Application.Models.Abstractions.Attributes;
-using SharedKernel.Application.Models.Abstractions.Enumerations;
+using SharedKernel.Domain.Models.Abstractions.Attributes;
+using SharedKernel.Domain.Models.Abstractions.Enumerations;
 using SharedKernel.Domain.Models.Entities.Users.Authorizations;
 using System.Reflection;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts.EntityTypeConfigurations {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts.EntityTypeConfigurations {
 
     public class PermissionsAssignedToRole_EntityTypeConfiguration : IEntityTypeConfiguration<PermissionAssignedToRole> {
 
@@ -32,7 +32,7 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
             // Configura la restricción de clave única
             permissionAssignedToRoleModelBuilder.HasIndex(permissionAssignedToRole => new { permissionAssignedToRole.RoleID, permissionAssignedToRole.PermissionID }).IsUnique();
 
-            // Configura la relación con la entidad Role
+            // Configura la relación con la entidad Entity
             permissionAssignedToRoleModelBuilder.HasOne(permissionAssignedToRole => permissionAssignedToRole.Role)
                   .WithMany(role => role.PermissionAssignedToRoles)
                   .HasForeignKey(permissionAssignedToRole => permissionAssignedToRole.RoleID)
@@ -43,7 +43,7 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
             // con el objetivo de optimizar la búsqueda de role_permission's asociados a un rol específico.
             permissionAssignedToRoleModelBuilder.HasIndex(roleAssignedToUser => roleAssignedToUser.RoleID).HasDatabaseName("idx_role_permissions_role_id");
 
-            // Configura la relación con la entidad Permission
+            // Configura la relación con la entidad Entity
             permissionAssignedToRoleModelBuilder.HasOne(permissionAssignedToRole => permissionAssignedToRole.Permission)
                   .WithMany(permission => permission.PermissionAssignedToRoles)
                   .HasForeignKey(permissionAssignedToRole => permissionAssignedToRole.PermissionID)
@@ -71,13 +71,13 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
                 var roleMetadata = typeof(DefaultRoles).GetField(role.ToString())!.GetCustomAttribute<RoleAttribute>() ??
                     throw new InvalidOperationException($"El rol {role} no tiene definidos los metadatos requeridos.");
                 return roleMetadata.Permissions.Select(permission => {
-                    var permissionMetadata = typeof(Permissions).GetField(permission.ToString())!.GetCustomAttribute<PermissionAttribute>() ??
+                    var permissionMetadata = typeof(SystemPermissions).GetField(permission.ToString())!.GetCustomAttribute<PermissionAttribute>() ??
                         throw new InvalidOperationException($"El permiso de acceso {permission} no tiene definidos los metadatos requeridos.");
-                    return new PermissionAssignedToRole {
-                        ID = idCounter++,
-                        RoleID = (int) role,
-                        PermissionID = (int) permission
-                    };
+                    return new PermissionAssignedToRole(
+                        identifier: idCounter++,
+                        roleID: (int) role,
+                        permissionID: (int) permission
+                    );
                 });
             });
 

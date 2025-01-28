@@ -2,12 +2,12 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SharedKernel.Domain.Models.Entities.Users;
 
-namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Contexts.EntityTypeConfigurations {
+namespace SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts.EntityTypeConfigurations {
 
     public class User_EntityTypeConfiguration : IEntityTypeConfiguration<User> {
 
         /// <summary>
-        /// Configura la entidad `User` y sus propiedades en el modelo de la base de datos.
+        /// Configura la entidad `Entity` y sus propiedades en el modelo de la base de datos.
         /// </summary>
         /// <param name="userModelBuilder">Generador de modelo de usuarios.</param>
         public void Configure (EntityTypeBuilder<User> userModelBuilder) {
@@ -27,18 +27,13 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
             // Configura las propiedades de la entidad
             userModelBuilder.Property(user => user.Username)
                 .HasColumnName("username")
-                .HasMaxLength(20)
+                .HasMaxLength(30)
                 .IsRequired(); // El nombre de usuario es obligatorio y tiene un límite de 20 caracteres
 
             userModelBuilder.Property(user => user.Password)
                 .HasColumnName("password")
                 .HasMaxLength(64)
-                .IsRequired(); // La contraseña es obligatoria y tiene un límite de 64 caracteres
-
-            userModelBuilder.Property(user => user.EncryptedPassword)
-                .HasColumnName("encrypted_password")
-                .HasMaxLength(64)
-                .IsRequired(); // La contraseña encriptada es obligatoria y tiene un límite de 64 caracteres
+                .IsRequired(); // La contraseña es obligatoria, tiene un límite de 64 caracteres y es encriptada por la aplicación.
 
             userModelBuilder.Property(user => user.Name)
                 .HasColumnName("name")
@@ -50,15 +45,15 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
                 .HasMaxLength(50)
                 .IsRequired(); // El correo electrónico es obligatorio y tiene un límite de 50 caracteres
 
+            // La fecha y hora de creación se establece automáticamente al agregar la entidad a la base de datos.
             userModelBuilder.Property(user => user.CreatedAt)
                 .HasColumnName("created_at")
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .IsRequired(); // La fecha y hora de creación se establece automáticamente y es obligatoria
+                .IsRequired();
 
+            // La fecha y hora de actualización se establece automáticamente al actualizar la entidad en la base de datos.
             userModelBuilder.Property(user => user.UpdatedAt)
                 .HasColumnName("updated_at")
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .IsRequired(); // La fecha y hora de última actualización se establece automáticamente y es obligatoria
+                .IsRequired();
 
             // Configura los índices únicos
             userModelBuilder
@@ -75,17 +70,16 @@ namespace SharedKernel.Infrastructure.Services.Persistence.EntityFramework.Conte
         /// </summary>
         /// <param name="userModelBuilder">Generador de modelo de usuarios.</param>
         private static void InitializeData (EntityTypeBuilder<User> userModelBuilder) {
-            // Semillas de datos para la entidad User
+            // Semillas de datos para la entidad Entity
             userModelBuilder.HasData([
                 new User {
                     ID = 1,
-                    Username = "admin",
-                    Email = "admin@gmail.com",
-                    Name = "John Doe",
-                    Password = "secret-key",
-                    EncryptedPassword = "$2a$11$DEr.JIMcwp8lhjb4dyOu5Ob.aDZfLOVDHk9otvQjPv1Yi34GY3ZTK",
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    Username = "CristianSoftwareDeveloper",
+                    Email = "cristian.rojas.software.developer@gmail.com",
+                    Name = "Cristian Rojas",
+                    Password = "$2a$11$DEr.JIMcwp8lhjb4dyOu5Ob.aDZfLOVDHk9otvQjPv1Yi34GY3ZTK",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 }
             ]);
         }

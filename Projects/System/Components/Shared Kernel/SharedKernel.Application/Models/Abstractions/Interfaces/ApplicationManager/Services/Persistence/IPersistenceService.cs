@@ -1,4 +1,4 @@
-﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.GenericRepositories;
+﻿using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence.Generic_Repositories;
 
 namespace SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence {
 

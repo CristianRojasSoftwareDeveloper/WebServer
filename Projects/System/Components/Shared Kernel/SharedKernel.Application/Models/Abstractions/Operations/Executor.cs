@@ -21,7 +21,7 @@ namespace SharedKernel.Application.Models.Abstractions.Operations {
         /// <param name="detailedLog">Indica si se debe registrar información detallada, como tiempos de ejecución y resultados.</param>
         /// <returns>Respuesta de la operación envuelta en un objeto <see cref="Response{StaticResponseType}"/>.</returns>
         /// <remarks>Este método maneja tanto operaciones sincrónicas como asincrónicas. Si se pasa una operación sincrónica, debe envolverse en un Task utilizando Task.FromResult.</remarks>
-        private static async Task<Response<StaticResponseType>> ExecuteOperation<StaticInputType, StaticResponseType> (Func<StaticInputType, Task<StaticResponseType>> operation, StaticInputType operationInput, bool detailedLog) {
+        public static async Task<Response<StaticResponseType>> ExecuteOperation<StaticInputType, StaticResponseType> (Func<StaticInputType, Task<StaticResponseType>> operation, StaticInputType operationInput, bool detailedLog) {
 
             #region Validación de los parámetros de entrada para asegurar que no sean nulos.
             if (operation == null)
@@ -47,9 +47,9 @@ namespace SharedKernel.Application.Models.Abstractions.Operations {
                 // Se ejecuta la operación asincrónica pasando el input correspondiente.
                 var operationResponse = await operation(operationInput);
 
-                // Si se requiere un log detallado, se registra que la operación se ejecutó correctamente.
+                // Si se requiere un log detallado, se registra que la operación se ejecutó exitosamente.
                 if (detailedLog)
-                    Console.WriteLine("Operación ejecutada correctamente.");
+                    Console.WriteLine("Operación ejecutada exitosamente.");
 
                 // Si la respuesta de la operación es no nula, se retorna un objeto de respuesta exitoso.
                 // Si la respuesta es nula, se retorna una respuesta exitosa con un mensaje indicando que la operación devolvió un resultado vacío.
@@ -84,34 +84,6 @@ namespace SharedKernel.Application.Models.Abstractions.Operations {
                 }
             }
 
-        }
-
-        /// <summary>
-        /// Ejecuta una operación sincrónica con lógica de registro y manejo de errores.
-        /// </summary>
-        /// <typeparam name="StaticInputType">Tipo de entrada de la operación.</typeparam>
-        /// <typeparam name="StaticResponseType">Tipo de resultado de la operación.</typeparam>
-        /// <param name="operation">Función sincrónica que representa la operación a ejecutar.</param>
-        /// <param name="operationInput">Entrada de la operación.</param>
-        /// <param name="detailedLog">Indica si se debe registrar información detallada sobre la ejecución.</param>
-        /// <returns>Respuesta de la operación envuelta en un objeto <see cref="Response{StaticResponseType}"/>.</returns>
-        public static Response<StaticResponseType> ExecuteSynchronousOperation<StaticInputType, StaticResponseType> (Func<StaticInputType, StaticResponseType> operation, StaticInputType operationInput, bool detailedLog = false) {
-            // Invoca el método común para iniciar la ejecución sincrónica.
-            return ExecuteOperation((input) => Task.FromResult(operation(input)), operationInput, detailedLog).GetAwaiter().GetResult();
-        }
-
-        /// <summary>
-        /// Ejecuta una operación asincrónica con lógica de registro y manejo de errores.
-        /// </summary>
-        /// <typeparam name="StaticInputType">Tipo de entrada de la operación.</typeparam>
-        /// <typeparam name="StaticResponseType">Tipo de resultado de la operación.</typeparam>
-        /// <param name="operation">Función asincrónica que representa la operación a ejecutar.</param>
-        /// <param name="operationInput">Entrada de la operación.</param>
-        /// <param name="detailedLog">Indica si se debe registrar información detallada sobre la ejecución.</param>
-        /// <returns>Respuesta de la operación envuelta en un objeto <see cref="Response{StaticResponseType}"/>.</returns>
-        public static async Task<Response<StaticResponseType>> ExecuteAsynchronousOperation<StaticInputType, StaticResponseType> (Func<StaticInputType, Task<StaticResponseType>> operation, StaticInputType operationInput, bool detailedLog = false) {
-            // Invoca el método común para iniciar la ejecución asincrónica.
-            return await ExecuteOperation(operation, operationInput, detailedLog);
         }
 
     }
