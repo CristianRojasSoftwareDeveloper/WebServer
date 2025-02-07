@@ -7,10 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Components\SystemLogs\SystemLogs.Application\SystemLogs.Application.csproj" />
-    <ProjectReference Include="..\Components\SystemLogs\SystemLogs.Infrastructure\SystemLogs.Infrastructure.csproj" />
-    <ProjectReference Include="..\Components\Users\Users.Application\Users.Application.csproj" />
-    <ProjectReference Include="..\Components\Users\Users.Infrastructure\Users.Infrastructure.csproj" />
+    <ProjectReference Include="..\Components\SharedKernel.Application\SharedKernel.Application.csproj" />
+    <ProjectReference Include="..\Components\SystemLogs.Application\SystemLogs.Application.csproj" />
+    <ProjectReference Include="..\Components\SystemLogs.Infrastructure\SystemLogs.Infrastructure.csproj" />
+    <ProjectReference Include="..\Components\Users.Application\Users.Application.csproj" />
+    <ProjectReference Include="..\Components\Users.Infrastructure\Users.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

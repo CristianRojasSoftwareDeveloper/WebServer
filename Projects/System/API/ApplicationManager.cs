@@ -14,229 +14,442 @@ using SharedKernel.Application.Utils.Extensions;
 using SharedKernel.Domain.Models.Abstractions.Enumerations;
 using SharedKernel.Domain.Models.Entities.SystemLogs;
 using SharedKernel.Domain.Models.Entities.Users;
+using SharedKernel.Infrastructure.Configurations;
+using SharedKernel.Infrastructure.Services.Auth;
+using SharedKernel.Infrastructure.Services.Persistence;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework;
+using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
 using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 using SystemLogs.Application.Operators.SystemLogs;
 using SystemLogs.Application.Operators.SystemLogs.Operations.CRUD.Commands.AddSystemLog;
+using SystemLogs.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
 using Users.Application.Operators.Permissions;
 using Users.Application.Operators.Roles;
 using Users.Application.Operators.Users;
 using Users.Application.Operators.Users.Operations.CRUD.Commands.RegisterUser;
-using Users.Application.Operators.Users.Operations.Use_Cases.Queries.AuthenticateUser;
+using Users.Application.Operators.Users.Operations.UseCases.Queries.AuthenticateUser;
+using Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories;
+using Users.Infrastructure.Services.Persistence.Entity_Framework.Repositories.Authorizations;
 
 namespace API {
 
     /// <summary>
-    /// Implementación del administrador de la aplicación que coordina la ejecución de operaciones 
-    /// y gestiona los servicios principales del sistema.
+    /// Coordina la ejecución de operaciones y gestiona los servicios principales del sistema.
     /// </summary>
     public class ApplicationManager : IApplicationManager {
 
-        /// <summary>
-        /// Diccionario de propiedades que representan operadores que implementan IReflexiveOperator.
-        /// Se utiliza para la introspección de operadores disponibles en el sistema.
-        /// </summary>
-        private static Dictionary<Type, PropertyInfo> _reflexiveOperators { get; } = typeof(ApplicationManager).GetProperties().
-            Where(property => typeof(IReflexiveOperator).IsAssignableFrom(property.PropertyType)).ToDictionary(property => property.PropertyType);
+        #region Campos Privados
 
         /// <summary>
-        /// Servicio que maneja la autenticación y autorización de usuarios.
+        /// Almacena la configuración de la aplicación.
+        /// </summary>
+        private readonly ApplicationConfiguration _applicationConfiguration;
+
+        /// <summary>
+        /// Asocia tipos de OperationHandlerFactory (implementaciones de «IOperationHandlerFactory») a sus propiedades correspondientes.
+        /// Se utiliza para resolver dinámicamente el OperationHandlerFactory adecuado para cada operación.
+        /// </summary>
+        private static readonly Dictionary<Type, PropertyInfo> _operationHandlerFactories = typeof(ApplicationManager).GetProperties()
+            .Where(property => typeof(IOperationHandlerFactory).IsAssignableFrom(property.PropertyType))
+            .ToDictionary(property => property.PropertyType);
+
+        #endregion
+
+        #region Propiedades Públicas
+
+        /// <summary>
+        /// Obtiene el servicio de autenticación y autorización de usuarios.
         /// </summary>
         public IAuthService AuthService { get; }
 
         /// <summary>
-        /// Servicio que gestiona la persistencia de datos en el sistema.
+        /// Obtiene el servicio de persistencia de datos, instanciado a partir de la colección de repositorios configurada.
         /// </summary>
-        public IPersistenceService PersistenceService { get; }
+        public IUnitOfWork UnitOfWork => new UnitOfWork_EntityFramework(DbContext, InitializeRepositoryCollection(DbContext));
 
         /// <summary>
-        /// Operador que maneja las operaciones relacionadas con usuarios.
+        /// Obtiene el operador encargado de gestionar operaciones relacionadas con usuarios.
         /// </summary>
-        public IUserOperator UserOperator { get; }
+        public IUserOperationHandlerFactory UserOperationHandlerFactory { get; }
 
         /// <summary>
-        /// Operador que maneja las operaciones relacionadas con roles.
+        /// Obtiene el operador encargado de gestionar operaciones relacionadas con roles.
         /// </summary>
-        public IRoleOperator RoleOperator { get; }
+        public IRoleOperationHandlerFactory RoleOperationHandlerFactory { get; }
 
         /// <summary>
-        /// Operador que maneja las operaciones relacionadas con permisos.
+        /// Obtiene el operador encargado de gestionar operaciones relacionadas con permisos.
         /// </summary>
-        public IPermissionOperator PermissionOperator { get; }
+        public IPermissionOperationHandlerFactory PermissionOperationHandlerFactory { get; }
 
         /// <summary>
-        /// Operador que maneja las operaciones relacionadas con logs del sistema.
+        /// Obtiene el operador encargado de gestionar operaciones relacionadas con logs del sistema.
         /// </summary>
-        public ISystemLogOperator SystemLogOperator { get; }
+        public ISystemLogOperationHandlerFactory SystemLogOperationHandlerFactory { get; }
+
+        #endregion
+
+        #region Constructor
 
         /// <summary>
-        /// Constructor de la clase ApplicationManager.
+        /// Inicializa una nueva instancia de la clase «ApplicationManager».
         /// </summary>
-        /// <param name="authService">Servicio de autenticación a inyectar.</param>
-        /// <param name="persistenceService">Servicio de persistencia a inyectar.</param>
-        public ApplicationManager (IAuthService authService, IPersistenceService persistenceService) {
-            // Asigna el servicio de autenticación.
-            AuthService = authService;
-            // Asigna el servicio de persistencia.
-            PersistenceService = persistenceService;
-            // Inicializa el operador de usuarios con los repositorios necesarios.
-            UserOperator = new UserOperator(PersistenceService.UserRepository, PersistenceService.RoleRepository, PersistenceService.RoleAssignedToUserRepository, AuthService);
-            // Inicializa el operador de roles con los repositorios necesarios.
-            RoleOperator = new RoleOperator(PersistenceService.RoleRepository, PersistenceService.PermissionRepository, PersistenceService.PermissionAssignedToRoleRepository, PersistenceService.RoleAssignedToUserRepository);
-            // Inicializa el operador de permisos con los repositorios necesarios.
-            PermissionOperator = new PermissionOperator(PersistenceService.PermissionRepository, PersistenceService.PermissionAssignedToRoleRepository);
-            // Inicializa el operador de logs del sistema con los repositorios necesarios.
-            SystemLogOperator = new SystemLogOperator(PersistenceService.SystemLogRepository, PersistenceService.UserRepository);
+        /// <param name="configuration">Establece la configuración de la aplicación.</param>
+        public ApplicationManager (ApplicationConfiguration configuration) {
+            // Asigna la configuración recibida.
+            _applicationConfiguration = configuration;
+            // Inicializa el servicio de autenticación utilizando los parámetros definidos en «JWT_Settings».
+            AuthService = new AuthService(_applicationConfiguration.JWT_Settings);
+            // Inicializa los operadores con las dependencias requeridas.
+            UserOperationHandlerFactory = new UserOperationHandlerFactory(AuthService);
+            RoleOperationHandlerFactory = new RoleOperationHandlerFactory();
+            PermissionOperationHandlerFactory = new PermissionOperationHandlerFactory();
+            SystemLogOperationHandlerFactory = new SystemLogOperationHandlerFactory();
+            // Asegura que la base de datos se encuentre creada y disponible.
+            DbContext.Database.EnsureCreated();
+        }
+
+        #endregion
+
+        #region Métodos Privados
+
+        #region Validación
+
+        /// <summary>
+        /// Valida el token de acceso y obtiene los reclamos asociados al usuario.
+        /// </summary>
+        /// <typeparam name="ResultType">
+        /// Define el tipo del resultado esperado, usado para construir una respuesta en caso de error.
+        /// </typeparam>
+        /// <param name="authService">
+        /// Recibe el servicio de autenticación de usuarios.
+        /// </param>
+        /// <param name="accessToken">
+        /// Recibe el token de autenticación, que puede ser nulo, vacío o contener solo espacios.
+        /// </param>
+        /// <param name="tokenClaims">
+        /// Retorna los reclamos obtenidos del token; si el token es inválido, se asignan credenciales de invitado.
+        /// </param>
+        /// <remarks>
+        /// Valida el token mediante el servicio de autenticación. Lanza una excepción a través de <see cref="UnauthorizedError.Create"/>
+        /// si ocurre algún error durante la validación.
+        /// </remarks>
+        private static void ValidateAccessToken<ResultType> (IAuthService authService, string? accessToken, out TokenClaims tokenClaims) {
+            // Comprueba si el token es nulo, vacío o contiene solo espacios.
+            if (string.IsNullOrWhiteSpace(accessToken)) {
+                // Asigna credenciales de invitado.
+                tokenClaims = TokenClaims.CreateGuestTokenClaims();
+            } else {
+                try {
+                    // Valida el token usando el servicio de autenticación.
+                    tokenClaims = authService.ValidateToken(accessToken);
+                } catch (Exception ex) {
+                    // Registra el error formateado en la salida de error.
+                    Console.Error.WriteLine(ex.GetFormattedDetails());
+                    // Asegura que tokenClaims quede inicializado con un valor predeterminado.
+                    tokenClaims = default!;
+                    // Lanza una excepción indicando que el token es inválido o ha expirado.
+                    throw UnauthorizedError.Create("El token de acceso proporcionado no es válido o ha expirado.");
+                }
+            }
         }
 
         /// <summary>
-        /// Obtiene la instancia del operador responsable de procesar una operación específica.
+        /// Valida que el usuario posea los permisos requeridos para ejecutar la operación.
         /// </summary>
-        /// <param name="operation">Instancia de la operación que requiere ser procesada.</param>
-        /// <returns>Instancia de <see cref="IReflexiveOperator"/> que procesará la operación.</returns>
-        /// <exception cref="InvalidOperationException">
-        /// Se lanza en los siguientes casos:
-        /// <list type="bullet">
-        /// <item><description>Cuando la operación no tiene definido el atributo <see cref="AssociatedOperatorAttribute"/>.</description></item>
-        /// <item><description>Cuando no se encuentra un operador asociado para el tipo especificado en el atributo.</description></item>
-        /// </list>
-        /// </exception>
-        private IReflexiveOperator GetAssociatedOperator (IOperation operation) {
-            // Obtiene el tipo de la operación proporcionada.
+        /// <typeparam name="OperationType">
+        /// Especifica el tipo de la operación, que debe implementar <see cref="IOperation"/>.
+        /// </typeparam>
+        /// <param name="operation">
+        /// Recibe la instancia de la operación a ejecutar.
+        /// </param>
+        /// <param name="userPermissions">
+        /// Recibe el conjunto de permisos asociados al usuario.
+        /// </param>
+        /// <remarks>
+        /// Extrae el atributo «RequiredPermissionsAttribute» de la operación y verifica si el usuario posee alguno de los permisos requeridos.
+        /// Lanza una excepción mediante <see cref="UnauthorizedError.Create"/> si no se cumplen los permisos.
+        /// </remarks>
+        private static void ValidateOperationPermissions<OperationType> (OperationType operation, IEnumerable<SystemPermissions> userPermissions) where OperationType : IOperation {
+            // Obtiene el tipo real de la operación.
             var operationType = operation.GetType();
-            // Obtiene el atributo AssociatedOperatorAttribute del tipo de operación.
-            var associatedOperatorAttribute = operationType.GetCustomAttribute<AssociatedOperatorAttribute>() ?? throw new InvalidOperationException($"La operación {operationType.Name} no tiene el atributo AssociatedOperator definido.");
-            // Extrae la propiedad OperatorType del atributo.
-            var operatorType = associatedOperatorAttribute.OperatorType;
-            // Busca en el diccionario "_reflexiveOperators" la propiedad correspondiente al tipo de operador especificado.
-            // También verifica que el valor obtenido sea una instancia válida de "IReflexiveOperator".
-            if (!_reflexiveOperators.TryGetValue(operatorType, out var operatorProperty) || operatorProperty.GetValue(this) is not IReflexiveOperator operatorInstance)
-                throw new InvalidOperationException($"No se encontró un operador del tipo {operatorType.Name}.");
-            // Devuelve la instancia del operador asociado.
+            // Extrae el atributo que especifica los permisos requeridos.
+            var requiredPermissions = operationType.GetCustomAttribute<RequiredPermissionsAttribute>()?.Permissions;
+            // Permite la operación si no hay permisos requeridos o si el usuario tiene alguno de ellos.
+            if (requiredPermissions == null || !requiredPermissions.Any() || requiredPermissions.Any(userPermissions.HasPermission))
+                return;
+            // Lanza una excepción si el usuario no cumple con los permisos requeridos.
+            throw UnauthorizedError.Create(
+                $"El usuario no tiene los permisos necesarios para ejecutar la operación {operationType.Name}. " +
+                $"Permisos requeridos: {string.Join(", ", requiredPermissions)}"
+            );
+        }
+
+        #endregion
+
+        #region Configuración y Acceso a Recursos
+
+        /// <summary>
+        /// Obtiene el contexto de base de datos según la configuración de la aplicación.
+        /// </summary>
+        /// <remarks>
+        /// Crea una instancia de <see cref="InMemory_DbContext"/> si se utiliza una base de datos en memoria;
+        /// de lo contrario, crea una instancia de <see cref="PostgreSQL_DbContext"/> usando la cadena de conexión configurada.
+        /// </remarks>
+        private ApplicationDbContext DbContext => _applicationConfiguration.InMemoryDbContext switch {
+            true => new InMemory_DbContext(),  // Se utiliza el contexto en memoria.
+            false => new PostgreSQL_DbContext(_applicationConfiguration.ConnectionStrings.PostgreSQL)  // Se utiliza PostgreSQL.
+        };
+
+        /// <summary>
+        /// Inicializa la colección de repositorios necesaria para la persistencia.
+        /// </summary>
+        /// <param name="applicationDbContext">Instancia del contexto de base de datos.</param>
+        /// <returns>
+        /// Devuelve una instancia de <see cref="RepositoryCollection"/> configurada con los repositorios para usuarios, roles, permisos, asignaciones y logs.
+        /// </returns>
+        /// <remarks>
+        /// Se crean repositorios específicos para cada entidad necesaria en la aplicación.
+        /// </remarks>
+        private static RepositoryCollection InitializeRepositoryCollection (ApplicationDbContext applicationDbContext) => new(
+            // Crea el repositorio para la entidad «User».
+            new User_EntityFrameworkRepository(applicationDbContext),
+            // Crea el repositorio para la entidad «Role».
+            new Role_EntityFrameworkRepository(applicationDbContext),
+            // Crea el repositorio para la entidad «Permission».
+            new Permission_EntityFrameworkRepository(applicationDbContext),
+            // Crea el repositorio para asignar roles a usuarios.
+            new RoleAssignedToUser_EntityFrameworkRepository(applicationDbContext),
+            // Crea el repositorio para asignar permisos a roles.
+            new PermissionAssignedToRole_EntityFrameworkRepository(applicationDbContext),
+            // Crea el repositorio para la entidad «SystemLog».
+            new SystemLog_EntityFrameworkRepository(applicationDbContext)
+        );
+
+        #endregion
+
+        #region Resolución y Procesamiento
+
+        /// <summary>
+        /// Obtiene la instancia del operador responsable de procesar la operación.
+        /// </summary>
+        /// <param name="operation">
+        /// Recibe la instancia de la operación que se desea procesar.
+        /// </param>
+        /// <returns>
+        /// Devuelve una instancia de <see cref="IOperationHandlerFactory"/> que se utilizará para manejar la operación.
+        /// </returns>
+        /// <remarks>
+        /// Utiliza reflexión para extraer el atributo «AssociatedOperationHandlerFactoryAttribute» y resuelve el operador correspondiente del diccionario.
+        /// Lanza una excepción si no se encuentra el operador adecuado.
+        /// </remarks>
+        private IOperationHandlerFactory GetAssociatedOperationHandlerFactory (IOperation operation) {
+            // Obtiene el tipo de la operación.
+            var operationType = operation.GetType();
+            // Intenta obtener el atributo que indica el operador asociado.
+            var associatedOperatorAttribute = operationType.GetCustomAttribute<AssociatedOperationHandlerFactoryAttribute>()
+                ?? throw new InvalidOperationException($"La operación «{operationType.Name}» no tiene el atributo «AssociatedOperationHandlerFactory» definido.");
+            // Extrae el tipo del operador indicado en el atributo.
+            var operatorType = associatedOperatorAttribute.OperationHandlerFactoryType;
+            // Busca la propiedad asociada en el diccionario; verifica que devuelva una instancia válida.
+            if (!_operationHandlerFactories.TryGetValue(operatorType, out var operatorProperty) || operatorProperty.GetValue(this) is not IOperationHandlerFactory operatorInstance)
+                // Lanza excepción si no se encuentra el operador.
+                throw new InvalidOperationException($"No se encontró un operador del tipo «{operatorType.Name}».");
+            // Retorna la instancia del operador.
             return operatorInstance;
         }
 
         /// <summary>
-        /// Método genérico utilizado como punto de entrada a la API del sistema, se utiliza para ejecutar operaciones en el mismo.
+        /// Agrega detalles al log del sistema, incorporando información del token, de la operación ejecutada y de la respuesta obtenida.
         /// </summary>
-        /// <typeparam name="OperationType">El tipo de la operación a ejecutar.</typeparam>
-        /// <typeparam name="ResponseType">El tipo de la respuesta esperada de la operación.</typeparam>
-        /// <param name="operation">La operación que se desea ejecutar.</param>
-        /// <param name="accessToken">El token de acceso utilizado para validar permisos y tokenClaims.</param>
-        /// <returns>Una tarea que representa la respuesta de la operación ejecutada.</returns>
-        public async Task<Response<ResponseType>> ExecuteOperation<OperationType, ResponseType> (OperationType operation, string? accessToken = null) where OperationType : IOperation {
+        /// <typeparam name="OperationType">
+        /// Especifica el tipo de la operación ejecutada.
+        /// </typeparam>
+        /// <typeparam name="ResultType">
+        /// Especifica el tipo del resultado esperado de la operación.
+        /// </typeparam>
+        /// <param name="systemLog">
+        /// Recibe la instancia de <see cref="SystemLog"/> que se actualizará con la información.
+        /// </param>
+        /// <param name="tokenClaims">
+        /// Recibe los reclamos del usuario obtenidos del token.
+        /// </param>
+        /// <param name="operation">
+        /// Recibe la operación que se ejecutó.
+        /// </param>
+        /// <param name="response">
+        /// Recibe la respuesta resultante de la ejecución de la operación.
+        /// </param>
+        /// <remarks>
+        /// Determina el «UserID» a registrar en función del tipo de operación, utilizando el ID del token o extrayéndolo del cuerpo de la respuesta.
+        /// Actualiza el mensaje del log incluyendo el nombre de la operación y sus argumentos en formato JSON.
+        /// </remarks>
+        private void DetailSystemLog<OperationType, ResultType> (SystemLog systemLog, TokenClaims tokenClaims, OperationType operation, Response<ResultType> response) {
 
-            /// Crea un conjunto de tokenClaims para un usuario invitado.
-            /// </summary>
-            /// <returns>Claims de usuario invitado.</returns>
-            static TokenClaims CreateGuestTokenClaims () => new(
-                userID: 0,
-                username: "Guest",
-                email: string.Empty,
-                roles: ["Guest"],
-                permissions: [SystemPermissions.RegisterUser, SystemPermissions.AuthenticateUser]
-            );
+            // Asigna el «UserID» al log según el tipo de operación ejecutada.
+            systemLog.UserID = operation switch {
+                // Caso para operaciones de registro de usuario.
+                RegisterUser_Command =>
+                    tokenClaims?.UserID switch {
+                        // Utiliza el ID del token si es válido.
+                        > 0 => tokenClaims.UserID,
+                        // Si el ID del token no es válido, extrae el ID del usuario registrado del cuerpo de la respuesta.
+                        _ when response != null => response.Body switch {
+                            User registeredUser => registeredUser.ID,
+                            _ => throw new InvalidOperationException("El cuerpo de la respuesta no es del tipo esperado para «RegisterUser_Command».")
+                        }
+                    },
+                // Caso para operaciones de autenticación de usuario.
+                AuthenticateUser_Query =>
+                    tokenClaims?.UserID switch {
+                        // Utiliza el ID del token si es válido.
+                        > 0 => tokenClaims.UserID,
+                        // Si el ID del token no es válido, extrae el ID validando el token generado en el cuerpo de la respuesta.
+                        _ when response != null => response.Body switch {
+                            string generatedAccessToken => AuthService.ValidateToken(generatedAccessToken).UserID,
+                            _ => throw new InvalidOperationException("El cuerpo de la respuesta no es del tipo esperado para «AuthenticateUser_Query».")
+                        }
+                    },
+                // Por defecto, utiliza el ID obtenido del token.
+                _ => tokenClaims.UserID
+            };
 
-            /// <summary>
-            /// Agrega detalles al registro del sistema añadiendo información relevante derivada de los token claims del usuario, una operación específica y su respuesta asociada.
-            /// </summary>
-            /// <param name="systemLog">Instancia de «Entity» que representa el registro del sistema que será actualizado.</param>
-            /// <param name="tokenClaims">Instancia de «TokenClaims» que proporciona datos relacionados con el token, como el «ID».</param>
-            /// <param name="response">Instancia de «Response<ResponseType>» que contiene los datos obtenidos tras la ejecución de la operación, cuyo formato será evaluado.</param>
-            /// <exception cref="InvalidOperationException">Se lanza si la respuesta no cumple con el formato esperado para el tipo de operación ejecutada.</exception>
-            void DetailSystemLog (SystemLog systemLog, TokenClaims tokenClaims, OperationType operation, Response<ResponseType>? response) {
+            // Actualiza el mensaje del log agregando el nombre de la operación y sus argumentos en formato JSON.
+            systemLog.Message = $"Operation » {typeof(OperationType).Name}\nArguments: {operation!.AsJSON()}\n{systemLog.Message}";
 
-                systemLog.UserID = operation switch {
-                    // Caso: Operación de registro de usuario.
-                    RegisterUser_Command =>
-                        // Actualiza el «ID» en el registro del sistema basado en los datos del token o la respuesta.
-                        // Si el token contiene un «ID» válido (mayor a 0), se asigna directamente.
-                        // En caso contrario, se valida que el cuerpo de la respuesta contenga un objeto de tipo «Entity».
-                        // Si ninguna condición es satisfecha, se lanza una excepción indicando un formato inesperado.
-                        tokenClaims.UserID switch {
-                            > 0 => tokenClaims.UserID, // Caso: «ID» es mayor a 0, se asigna directamente.
-                            _ when response != null => response.Body switch {
-                                User registeredUser => registeredUser.ID, // Caso: El cuerpo es del tipo «Entity», se asigna su identificador.
-                                _ => throw new InvalidOperationException("El cuerpo de la respuesta no es del tipo esperado para «RegisterUser_Command».")
-                            }
-                        },
+        }
 
-                    // Caso: Operación de autenticación de usuario.
-                    AuthenticateUser_Query =>
-                        // Actualiza el «ID» en el registro del sistema basado en los datos del token o la respuesta.
-                        // Si el token contiene un «ID» válido (mayor a 0), se asigna directamente.
-                        // En caso contrario, se valida que el cuerpo de la respuesta contenga un token de acceso generado (tipo «string»).
-                        // Si el token de acceso es válido, se extrae y valida el «ID» asociado.
-                        // Si ninguna condición es satisfecha, se lanza una excepción indicando un formato inesperado.
-                        tokenClaims.UserID switch {
-                            > 0 => tokenClaims.UserID, // Caso: «ID» es mayor a 0, se asigna directamente.
-                            _ when response != null => response.Body switch {
-                                string generatedAccessToken => AuthService.ValidateToken(generatedAccessToken).UserID, // Caso: El cuerpo es un token de acceso generado, se valida y se extrae el ID.
-                                _ => throw new InvalidOperationException("El cuerpo de la respuesta no es del tipo esperado para «AuthenticateUser_Query».")
-                            }
-                        },
+        #endregion
 
-                    // Caso por defecto.
-                    _ => tokenClaims.UserID
-                };
+        #endregion
 
-                systemLog.Message = $"Operation » {typeof(OperationType).Name}\nArguments: {operation.AsJSON()}\n{systemLog.Message}";
+        #region Métodos Públicos
 
-            }
+        /// <summary>
+        /// Ejecuta centralizadamente una operación, gestionando autenticación, permisos, ejecución, manejo de errores y registro de logs.
+        /// </summary>
+        /// <typeparam name="OperationType">
+        /// Especifica el tipo de la operación a ejecutar. Debe implementar <see cref="IOperation"/>.
+        /// </typeparam>
+        /// <typeparam name="ResultType">
+        /// Especifica el tipo del resultado esperado de la operación.
+        /// </typeparam>
+        /// <param name="operation">
+        /// Recibe la instancia de la operación específica que se desea ejecutar.
+        /// </param>
+        /// <param name="accessToken">
+        /// Recibe un token de autenticación opcional para validar los permisos del usuario.
+        /// </param>
+        /// <returns>
+        /// Devuelve una instancia de <see cref="Response{ResultType}"/> que contiene el resultado de la operación o información sobre el error.
+        /// </returns>
+        /// <remarks>
+        /// El método realiza los siguientes pasos:
+        /// <list type="bullet">
+        ///   <item><description>Valida que la operación no sea nula.</description></item>
+        ///   <item><description>Valida el token de acceso y extrae los reclamos del usuario.</description></item>
+        ///   <item><description>Verifica que el usuario tenga los permisos requeridos para la operación.</description></item>
+        ///   <item><description>Resuelve el operador encargado de manejar la operación.</description></item>
+        ///   <item><description>Crea la unidad de trabajo y ejecuta la operación de forma asíncrona.</description></item>
+        ///   <item><description>Maneja los errores, registrándolos en el log.</description></item>
+        ///   <item><description>Registra el log del sistema con detalles de la operación y su ejecución.</description></item>
+        /// </list>
+        /// </remarks>
+        public async Task<Response<ResultType>> ExecuteOperation<OperationType, ResultType> (OperationType operation, string? accessToken = null) where OperationType : IOperation {
 
-            // Valida que la operación no sea nula, lanzando una excepción si no se cumple.
+            // Si la operación es nula se rechaza la ejecución.
             if (operation == null)
                 throw new ArgumentNullException(nameof(operation), "La operación no puede ser nula.");
 
-            TokenClaims tokenClaims;
-            Response<ResponseType>? response = null;
+            // Declara la variable que almacenará los reclamos (claims) obtenidos del token.
+            TokenClaims tokenClaims = default!;
 
-            // Inicia un cronómetro para medir el tiempo de ejecución de la operación.
+            // Declara la variable que almacenará el resultado final de la operación.
+            Response<ResultType> result = default!;
+
+            // Inicia un cronómetro para medir el tiempo total de ejecución de la operación.
             var stopwatch = Stopwatch.StartNew();
 
-            if (string.IsNullOrWhiteSpace(accessToken))
-                tokenClaims = CreateGuestTokenClaims();
-            else {
-                try {
-                    // Valida el token de acceso y obtiene los tokenClaims asociados al usuario.
-                    tokenClaims = AuthService.ValidateToken(accessToken);
-                } catch (Exception ex) {
-                    Console.Error.WriteLine(ex.GetFormattedDetails());
-                    return Response<ResponseType>.Failure(UnauthorizedError.Create("El token de acceso proporcionado no es válido o ha expirado"));
+            // Crea una nueva instancia de SystemLog para registrar información sobre la ejecución de la operación.
+            var systemLog = new SystemLog { Source = "ApplicationManager.ExecuteOperation" };
+
+            try {
+
+                // Realiza la validación del token de acceso y extrae la información del usuario.
+                // Si el token es nulo, se configuran automáticamente credenciales de usuario invitado.
+                // Si el token existe pero no es válido o ha expirado, se lanza una excepción de seguridad.
+                ValidateAccessToken<ResultType>(AuthService, accessToken, out tokenClaims);
+
+                // Verifica que el usuario tenga los permisos necesarios para ejecutar la operación.
+                // Se utiliza la lista de permisos obtenida de los reclamos del token.
+                ValidateOperationPermissions(operation, tokenClaims.Permissions);
+
+                // Resuelve la fábrica de manejadores asociada a la operación mediante reflexión.
+                var associatedOperationHandlerFactory = GetAssociatedOperationHandlerFactory(operation);
+                // Obtiene el delegado que se encargará de crear dinámicamente el manejador para la operación.
+                var operationHandlerCreator = associatedOperationHandlerFactory.GetOperationHandlerCreator<OperationType>();
+
+                // Crea la unidad de trabajo utilizando el contexto y la colección de repositorios.
+                using var unitOfWork = UnitOfWork;
+
+                // Invoca el delegado para crear el manejador de la operación, pasando la unidad de trabajo como parámetro.
+                var operationHandler = operationHandlerCreator.Invoke(associatedOperationHandlerFactory, [unitOfWork])!;
+
+                // Verifica que el manejador creado sea del tipo esperado.
+                if (operationHandler is IOperationHandler<OperationType, ResultType> typedOperationHandler) {
+                    // Ejecuta la operación de forma asíncrona y almacena el resultado.
+                    var operationResult = await typedOperationHandler.Handle(operation);
+                    // Construye la respuesta:
+                    // - Si se obtiene un resultado válido, se retorna una respuesta de éxito.
+                    // - Si el resultado es nulo, se retorna una respuesta de éxito con un mensaje indicando que el resultado está vacío.
+                    result = operationResult switch {
+                        not null => Response<ResultType>.Success(operationResult),
+                        _ => Response<ResultType>.Success(default(ResultType), statusMessage: $"La operación «{operation.GetType().Name}» ha obtenido un resultado vacío.")
+                    };
+                } else {
+                    // Lanza una excepción si el manejador no es del tipo esperado.
+                    throw new InvalidOperationException($"El manejador de operación no es del tipo esperado: {operationHandler.GetType().Name}");
                 }
+
+                // Configura el log estableciendo el nivel de información e indicando que la operación se ejecutó con éxito.
+                systemLog.LogLevel = LogLevel.Information;
+                // Establece el mensaje del registro del sistema con un mensaje de éxito.
+                systemLog.Message = "La operación ha sido ejecutada exitosamente.".Underline();
+
+            } catch (AggregateError ex) {
+                // Recorre cada error del AggregateError y los muestra en la consola.
+                foreach (var error in ex.Errors)
+                    Console.WriteLine($"\n{error.ErrorCode}» {error.Message}\n");
+                // Construye la respuesta de fallo a partir del error agregado.
+                result = Response<ResultType>.Failure(ex);
+            } catch (Exception ex) {
+                // En caso de excepción, configura el registro del sistema para indicar error.
+                systemLog.LogLevel = LogLevel.Error;
+                // Actualiza el mensaje del log con detalles del error ocurrido.
+                systemLog.Message = $"Ha ocurrido un error interno en el servidor durante la ejecución de la operación «{operation.GetType().Name}»:".Underline() + Environment.NewLine + ex.Message;
+                // Construye la respuesta de fallo con el código de error 500 (Internal Server Error).
+                result = Response<ResultType>.Failure(HttpStatusCode.InternalServerError, systemLog.Message, ex);
+            } finally {
+                // Detiene el cronómetro para obtener el tiempo total de ejecución.
+                stopwatch.Stop();
+                // Añade el tiempo de ejecución, formateado, al mensaje del log.
+                systemLog.Message += Environment.NewLine + $"Tiempo de ejecución: {stopwatch.Elapsed.AsFormattedTime()}.".Underline();
+                // Agrega detalles adicionales al log utilizando la información de la operación y la respuesta obtenida.
+                DetailSystemLog(systemLog, tokenClaims, operation, result);
+                // Crea la unidad de trabajo utilizando el contexto y la colección de repositorios.
+                using var unitOfWork = UnitOfWork;
+                // Registra el log del sistema de forma asíncrona.
+                await SystemLogOperationHandlerFactory.Create_AddSystemLog_CommandHandler(unitOfWork).Handle(new AddSystemLog_Command(systemLog));
             }
 
-            var systemLog = new SystemLog { Source = $"ApplicationManager.ExecuteOperation" };
-            try {
-                // Obtiene el operador asociado a la operación especificada.
-                var associatedOperator = GetAssociatedOperator(operation);
-                // Ejecuta la operación utilizando la función delegada proporcionada.
-                response = await associatedOperator.ExecuteHandler<OperationType, ResponseType>(operation, tokenClaims);
-                // Crea un log de sistema indicando que la operación se ejecutó exitosamente.
-                systemLog.LogLevel = LogLevel.Information;
-                // Registra el mensaje de éxito en el log.
-                systemLog.Message = "La operación ha sido ejecutada exitosamente.".Underline();
-                // Devuelve la respuesta de la operación.
-                return response;
-            } catch (Exception ex) {
-                // Crea un log de sistema indicando que ocurrió un error durante la ejecución.
-                systemLog.LogLevel = LogLevel.Error;
-                // Registra el mensaje de error en el log.
-                systemLog.Message = $"Ha ocurrido un error mientras se ejecutaba la operación: {ex.Message}.".Underline();
-                // Lanza nuevamente la excepción para que sea manejada por el invocador.
-                throw;
-            } finally {
-                // Detiene el cronómetro.
-                stopwatch.Stop();
-                // Registra el tiempo transcurrido.
-                systemLog.Message += $"\n{$"Tiempo de ejecución: {stopwatch.Elapsed.AsFormattedTime()}.".Underline()}";
-                // Agrega detalles al registro del sistema añadiendo información relevante.
-                DetailSystemLog(systemLog, tokenClaims, operation, response);
-                // Registra el log utilizando la función delegada proporcionada.
-                await SystemLogOperator.AddSystemLog(new AddSystemLog_Command(systemLog));
-            }
+            // Retorna el resultado final de la operación.
+            return result;
 
         }
+
+        #endregion
 
     }
 

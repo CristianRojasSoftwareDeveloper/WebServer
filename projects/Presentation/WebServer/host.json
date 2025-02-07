@@ -8,7 +8,6 @@
       "cors": {
         "allowedOrigins": [
           //"chrome-extension://<YOUR_EXTENSION_ID>",
-          "chrome-extension://kgldhlnnafgejkgnokojmjbnbddfjjmd",
           "http://localhost"
         ],
         "allowCredentials": true

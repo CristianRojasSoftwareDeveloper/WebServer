@@ -83,11 +83,10 @@ namespace ConsoleApplication.Layers {
             // Agrega el rol [ 1 = Administrator ] al usuario registrado
             var roleID = 1;
             var role = await persistenceService.RoleRepository.GetRoleByID(roleID);
-            var roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser(
-                identifier: null,
-                userID: (int) registeredUser.ID!,
-                roleID: (int) role.ID!
-            ));
+            var roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser {
+                UserID = (int) registeredUser.ID!,
+                RoleID = (int) role.ID!
+            });
             if (roleAssignedToUser == null)
                 Printer.PrintLine($"- Ha ocurrido un Error mientras se asignaba el rol '{role.Name}' al usuario '{registeredUser.Username}'");
             else
@@ -96,11 +95,10 @@ namespace ConsoleApplication.Layers {
             // Agrega el rol [ 2 = Moderator ] al usuario registrado
             roleID = 2;
             role = await persistenceService.RoleRepository.GetRoleByID(roleID);
-            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser(
-                identifier: null,
-                userID: (int) registeredUser.ID!,
-                roleID: (int) role.ID!
-            ));
+            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser {
+                UserID = (int) registeredUser.ID!,
+                RoleID = (int) role.ID!
+            });
             if (roleAssignedToUser == null)
                 Printer.PrintLine($"- Ha ocurrido un Error mientras se asignaba el rol '{role.Name}' al usuario '{registeredUser.Username}'");
             else
@@ -109,11 +107,10 @@ namespace ConsoleApplication.Layers {
             // Agrega el rol [ 3 = Entity ] al usuario registrado
             roleID = 3;
             role = await persistenceService.RoleRepository.GetRoleByID(roleID);
-            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser(
-                identifier: null,
-                userID: (int) registeredUser.ID!,
-                roleID: (int) role.ID!
-            ));
+            roleAssignedToUser = persistenceService.RoleAssignedToUserRepository.AddRoleAssignedToUser(new RoleAssignedToUser {
+                UserID = (int) registeredUser.ID!,
+                RoleID = (int) role.ID!
+            });
             if (roleAssignedToUser == null)
                 Printer.PrintLine($"- Ha ocurrido un Error mientras se asignaba el rol '{role.Name}' al usuario '{registeredUser.Username}'");
             else
@@ -174,11 +171,12 @@ namespace ConsoleApplication.Layers {
 
             #region Paso 6: Eliminar el usuario registrado según su ID 
             Printer.PrintLine($"\n{"6. Eliminando el usuario registrado según su ID [persistenceService.UserRepository.DeleteUserByID((int) updatedUser.ID!)]".Underline()}");
-            var isDeleted = await persistenceService.UserRepository.DeleteUserByID((int) updatedUser.ID!);
-            if (!isDeleted)
+            try {
+                var deletedUser = await persistenceService.UserRepository.DeleteUserByID((int) updatedUser.ID!);
+                Printer.PrintLine($"El usuario cuyo ID es [{deletedUser.ID}] ha sido eliminado exitosamente");
+            } catch (Exception) {
                 throw ApplicationError.Create(HttpStatusCode.InternalServerError, $"Ha ocurrido un Error mientras se eliminaba el usuario cuyo ID es: {updatedUser.ID}");
-            else
-                Printer.PrintLine($"El usuario cuyo ID es [{updatedUser.ID}] ha sido eliminado exitosamente");
+            }
             #endregion
 
             #region Paso 7: Consultar todos los usuarios nuevamente después de la eliminación del usuario registrado

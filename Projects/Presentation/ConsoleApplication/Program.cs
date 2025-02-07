@@ -1,16 +1,12 @@
 ﻿using API;
 using ConsoleApplication.Layers;
 using ConsoleApplication.Utils;
-using ConsoleApplication.Utils.Configurations;
 using Microsoft.Extensions.Configuration;
 using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager;
 using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Auth;
-using SharedKernel.Application.Models.Abstractions.Interfaces.ApplicationManager.Services.Persistence;
 using SharedKernel.Application.Utils.Extensions;
-using SharedKernel.Infrastructure.Services.Auth;
-using SharedKernel.Infrastructure.Services.Persistence.Entity_Framework.Contexts;
+using SharedKernel.Infrastructure.Configurations;
 using System.Diagnostics;
-using SystemLogs.Application.Operators.SystemLogs.Operations.CRUD.Queries.GetSystemLogs;
 
 namespace ConsoleApplication {
 
@@ -31,7 +27,7 @@ namespace ConsoleApplication {
         internal static async Task Main (string[] args) {
 
             // Crear una instancia de ConfigurationBuilder para construir la configuración de la aplicación
-            var configuration = new ConfigurationBuilder()
+            IConfiguration configuration = new ConfigurationBuilder()
                 // Establece la ruta base para buscar archivos de configuración. En este caso, usamos la ruta donde se ejecuta la aplicación.
                 .SetBasePath(AppContext.BaseDirectory)
                 // Agrega el archivo JSON llamado "appsettings.json" como una fuente de configuración.
@@ -45,12 +41,9 @@ namespace ConsoleApplication {
                 // Construye el objeto de configuración (`IConfiguration`) con las fuentes previamente definidas.
                 .Build();
 
-            // Obtener la cadena de conexión
-            string postgreSQL_ConnectionString = configuration.GetConnectionString("PostgreSQL") ??
-                throw new InvalidOperationException("No se encontró la cadena de conexión para PostgreSQL en la configuración de la aplicación.");
-
-            // Crear el contexto de base de datos
-            ApplicationDbContext databaseInstance = _InMemoryContext ? new InMemory_DbContext() : new PostgreSQL_DbContext(postgreSQL_ConnectionString);
+            // 2. Inicialización de la configuración en la capa de consola utilizando el wrapper «ConsoleApplicationConfiguration».
+            // Este método retorna directamente la configuración inicializada, permitiendo un estilo funcional.
+            var applicationConfiguration = ConsoleApplicationConfiguration.Initialize(configuration);
 
             // Stopwatch para medir el tiempo de ejecución
             Stopwatch stopwatch = new();
@@ -62,15 +55,15 @@ namespace ConsoleApplication {
                 #region Inicialización de servicios de la aplicación
                 Printer.PrintLine($"\n{"Inicializando los servicios de la aplicación".Underline()}");
 
-                IAuthService authService = new AuthService(JWT.Get_Settings(configuration));
+                // Instancia el administrador de la aplicación
+                IApplicationManager applicationManager = new ApplicationManager(applicationConfiguration);
+                Printer.PrintLine("- ApplicationManager inicializado exitosamente.");
+
+                IAuthService authService = applicationManager.AuthService;
                 Printer.PrintLine("- Servicio de autenticación inicializado exitosamente.");
 
-                IPersistenceService persistenceService = new PersistenceService(databaseInstance);
+                using var persistenceService = applicationManager.UnitOfWork;
                 Printer.PrintLine("- Servicio de persistencia inicializado exitosamente.");
-
-                // Instancia el administrador de la aplicación
-                IApplicationManager applicationManager = new ApplicationManager(authService, persistenceService);
-                Printer.PrintLine("- ApplicationManager inicializado exitosamente.");
                 #endregion
 
                 var systemLayerToTest = SystemLayer.API;
@@ -90,14 +83,11 @@ namespace ConsoleApplication {
                         break;
 
                     default:
-                        Printer.PrintLine($"La capa especificada en {nameof(systemLayerToTest)} no es válida.");
+                        Printer.PrintLine($"La capa especificada «{systemLayerToTest}» no es válida.");
                         break;
 
                 }
 
-                var resultingSystemLogs = await applicationManager.SystemLogOperator.GetSystemLogs(new GetSystemLogs_Query());
-                foreach (var systemLog in resultingSystemLogs.Body!)
-                    systemLog.PrintSystemLog();
             } catch (Exception ex) {
 
                 Printer.PrintLine($"\n{"Error:".Underline()}");
@@ -106,7 +96,6 @@ namespace ConsoleApplication {
 
             } finally {
 
-                databaseInstance.Dispose();
                 stopwatch.Stop();
                 Printer.PrintLine($"\nTiempo de ejecución: {stopwatch.Elapsed.AsFormattedTime()}");
 
